@@ -68,7 +68,7 @@ def install_gateway():
     cmd = """sudo ./ti-gw-installer-linux.run \
 --serviceName ti-gw-secunet \
 --prefix /home/vm/tigw \
---base64String $(cat ./55ytoken) \
+--base64String $(cat ./token) \
 --clientType device \
 --installermode normal \
 --enable-components clientService,gatewayMode \
