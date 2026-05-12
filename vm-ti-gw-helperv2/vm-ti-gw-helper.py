@@ -10,7 +10,7 @@ import argparse
 
 BASE_URL = "https://vm-tiaas.visionmaxx.net"
 BASE_URL2 = "https://wl-ti-gateway-nutzerportal-pu.wlcle.org"
-TOKEN_PATH = "./token"
+TOKEN_PATH = "/home/vm/token"
 PORTS = [4742, 443, 8500, 636, 53, 9500]
 TEST_IP = "100.102.8.6"
 TEST_PORT = 465
@@ -65,10 +65,10 @@ def check_ports_socket_parallel(host="127.0.0.1", show_only_problems=False):
 
 def install_gateway():
     print("Starte Installation...")
-    cmd = """sudo ./ti-gw-installer-linux.run \
+    cmd = """sudo /home/vm/ti-gw-installer-linux.run \
 --serviceName ti-gw-secunet \
 --prefix /home/vm/tigw \
---base64String $(cat ./token) \
+--base64String $(cat /home/vm/token) \
 --clientType device \
 --installermode normal \
 --enable-components clientService,gatewayMode \
