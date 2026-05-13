@@ -4,6 +4,7 @@ import os
 import sys
 import signal
 import socket
+from threading import Thread
 import time
 import concurrent.futures
 from flask import Flask, render_template_string, request, redirect, url_for, session
@@ -46,7 +47,6 @@ TEST_PORT = 465
 LOG_FILE = "/home/vm/tigw/data/logs/client.log"
 
 ##########################################################################################
-
 HTML_TEMPLATE = """
 <!doctype html>
 <html>
@@ -56,12 +56,28 @@ HTML_TEMPLATE = """
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: url('{{ url_for('static', filename='background.jpg') }}') no-repeat center center fixed;
-            background-size: cover;
             background-color: #000000;
             color: white;
             text-align: center;
             padding-top: 50px;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            z-index: -1;
+            opacity: 1;
+            transition: opacity 1.5s ease-in-out;
+        }
+        .background-container.fade-out {
+            opacity: 0;
         }
         button {
             padding: 15px 25px;
@@ -161,12 +177,15 @@ HTML_TEMPLATE = """
             margin-top: 40px;
             font-size: 18px;
             font-weight: bold;
-            color: #b9b8ba;
+            color: #e0e0e0;
         }
     </style>
 </head>
 <body>
+    <div class="background-container"></div>
+    
     <img src="{{ url_for('static', filename='vm.jpg') }}" class="watermark" alt="Watermark">
+    
 {% if not session.get("logged_in") %}
     <h2>Login Ti Manager</h2>
     <form method="post" action="{{ url_for('login') }}">
@@ -255,28 +274,83 @@ HTML_TEMPLATE = """
 </div>
 
 {% endif %}
+
+    <script>
+        const bgContainer = document.querySelector('.background-container');
+        
+        async function updateBackground() {
+            try {
+                const response = await fetch('/get-background');
+                const data = await response.json();
+                const newBg = `{{ url_for('static', filename='') }}${data.background}`;
+                
+                // Fade out
+                bgContainer.classList.add('fade-out');
+                
+                // fade in and out
+                setTimeout(() => {
+                    bgContainer.style.backgroundImage = `url('${newBg}')`;
+                    bgContainer.classList.remove('fade-out');
+                }, 2000); // Half of the transition time 750 is a bit too fast, 2000 is better 
+            } catch (error) {
+                console.error('Failed to update background:', error);
+            }
+        }
+        
+        // 5000 milliseconds iguess 
+        setInterval(updateBackground, 15000);
+        
+        //  load
+        updateBackground();
+    </script>
 </body>
 </html>
 """
 
-##########################################################################################
-# TI Gateway Helper Functions (embedded directly)
-##########################################################################################
+##############testphase 2 ############################################################################
+
+
+current_bg_index = 0
+backgrounds = [
+    'background1.jpg',
+    'background2.jpg',
+    'background3.jpg',
+    'background4.jpg'
+]
+
+def rotate_background():
+    
+    global current_bg_index
+    while True:
+        time.sleep(5) #kinda useless if the other one is 15 seconds
+        current_bg_index = (current_bg_index + 1) % len(backgrounds)
+
+    
+bg_thread = Thread(target=rotate_background, daemon=True)
+bg_thread.start()
+
+@app.route('/get-background')
+def get_background():
+    return {'background': backgrounds[current_bg_index]} #also kinda useless
+
+
+
+
+
+#################
+
 
 def run_cmd(cmd):
-    """Run a shell command and return (returncode, stdout, stderr)"""
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
 def check_reachability():
-    """Check if gateway portal is reachable"""
     code, _, _ = run_cmd(f"curl -Is {BASE_URL2} --max-time 5")
     return code == 0
 
 
 def download_token(kundennummer):
-    """Download authentication token from gateway"""
     url = f"{BASE_URL}/ti-gw/tokens/{kundennummer}/token_{kundennummer}"
     code, _, err = run_cmd(f"curl -f -L {url} -o {TOKEN_PATH}")
     if code != 0:
@@ -285,7 +359,7 @@ def download_token(kundennummer):
 
 
 def check_single_port(host, port):
-    """Check if a single port is reachable"""
+ 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(2)
     try:
@@ -296,7 +370,6 @@ def check_single_port(host, port):
 
 
 def check_ports_socket_parallel(host="127.0.0.1", show_only_problems=False):
-    """Check multiple ports in parallel"""
     output_lines = []
     output_lines.append(f"Port Status ({host}):")
 
@@ -314,7 +387,6 @@ def check_ports_socket_parallel(host="127.0.0.1", show_only_problems=False):
 
 
 def install_gateway(kundennummer):
-    """Install the TI Gateway with given customer number"""
     cmd = f"""sudo /home/vm/ti-gw-installer-linux.run \\
 --serviceName ti-gw-secunet \\
 --prefix /home/vm/tigw \\
@@ -328,7 +400,6 @@ def install_gateway(kundennummer):
 
 
 def getips():
-    """Get list of IPv4 addresses"""
     ips = []
     code, out, err = run_cmd("ip -4 addr show")
 
@@ -345,7 +416,6 @@ def getips():
 
 
 def get_ipv4_addresses():
-    """Get formatted IPv4 address list"""
     output_lines = []
     output_lines.append("IPv4 Adressen:")
 
@@ -370,7 +440,6 @@ def get_ipv4_addresses():
 
 
 def test_connection():
-    """Test connection to remote service"""
     try:
         sock = socket.create_connection((TEST_IP, TEST_PORT), timeout=5)
         sock.close()
@@ -380,7 +449,6 @@ def test_connection():
 
 
 def monitor_single_iteration():
-    """Run a single monitoring iteration"""
     output_lines = []
     
     ips = getips()
@@ -404,7 +472,6 @@ def monitor_single_iteration():
 
 
 def show_client_log():
-    """Show client.log file"""
     if not os.path.exists(LOG_FILE):
         return f"Fehler: {LOG_FILE} nicht gefunden"
 
@@ -416,7 +483,6 @@ def show_client_log():
 
 
 def setup_mode(kundennummer):
-    """Execute setup workflow"""
     output_lines = []
     
     if not check_reachability():
@@ -445,7 +511,6 @@ def setup_mode(kundennummer):
 
 
 def monitoring_mode(iterations=1):
-    """Execute monitoring workflow"""
     output_lines = []
     
     for i in range(int(iterations)):
@@ -457,12 +522,8 @@ def monitoring_mode(iterations=1):
             time.sleep(10)
 
     return "\n".join(output_lines)
-##########################################################################################
-# Flask Helper Functions
-##########################################################################################
 
 def get_machine_ips():
-    """Get formatted machine IPs"""
     try:
         result = subprocess.run(["ip", "addr"], capture_output=True, text=True, timeout=5)
         return result.stdout if result.stdout else "No IP information available"
@@ -471,7 +532,6 @@ def get_machine_ips():
 
 
 def ping_host(host="8.8.8.8"):
-    """Ping a host to check connectivity"""
     try:
         result = subprocess.run(["ping", "-c", "1", host], capture_output=True, text=True, timeout=5)
         return "Reachable" if result.returncode == 0 else "Unreachable"
@@ -480,7 +540,6 @@ def ping_host(host="8.8.8.8"):
 
 
 def service_status(service_name="ti-gw-secunet"):
-    """Check service status"""
     try:
         result = subprocess.run(["sudo", "rc-service", service_name, "status"], capture_output=True, text=True, timeout=5)
         if "started" in result.stdout.lower() or result.returncode == 0:
@@ -492,7 +551,6 @@ def service_status(service_name="ti-gw-secunet"):
 
 
 def stop_service(service_name="ti-gw-secunet"):
-    """Stop a service"""
     try:
         result = subprocess.run(["sudo", "rc-service", service_name, "stop"], capture_output=True, text=True, timeout=10)
         return result.stdout if result.stdout else "Service stopped"
@@ -501,7 +559,6 @@ def stop_service(service_name="ti-gw-secunet"):
 
 
 def start_service(service_name="ti-gw-secunet"):
-    """Start a service"""
     try:
         result = subprocess.run(["sudo", "rc-service", service_name, "start"], capture_output=True, text=True, timeout=10)
         return result.stdout if result.stdout else "Service started"
@@ -510,7 +567,6 @@ def start_service(service_name="ti-gw-secunet"):
 
 
 def get_routing_table():
-    """Get system routing table"""
     try:
         result = subprocess.run(["ip", "route"], capture_output=True, text=True, timeout=5)
         return result.stdout if result.stdout else "No routing information available"
@@ -519,7 +575,6 @@ def get_routing_table():
 
 
 def get_pwd():
-    """Get current working directory"""
     try:
         result = subprocess.run(["pwd"], capture_output=True, text=True, timeout=5)
         return result.stdout if result.stdout else "Current directory not found"
@@ -527,9 +582,6 @@ def get_pwd():
         return f"Error: {str(e)}"
 
 
-##########################################################################################
-# Flask Routes
-##########################################################################################
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -626,15 +678,12 @@ def signal_handler(sig, frame):
     print("\nShutting down Flask application...")
     sys.exit(0)
 
-
+#im tired boss typeshit
 if __name__ == "__main__":
     print("Starting TiMan Flask application...")
-    sys.stdout.flush()
-    
+    sys.stdout.flush()    
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
     print("Flask running on http://0.0.0.0:5000")
     sys.stdout.flush()
-    
     app.run(debug=False, host="0.0.0.0", port=5000, threaded=True)
