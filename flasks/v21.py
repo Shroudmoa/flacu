@@ -571,7 +571,7 @@ def setup_mode(kundennummer):
     change_password_output = change_vm_password(kundennummer)
     output_lines.append(change_password_output)
     output_lines.append(out if out else err)
-    os.time.sleep(5)  #kurze Pause vor den Checks
+    time.sleep(5)  #kurze Pause damit der Dienst Zeit hat zu starten
     ip_info = get_ipv4_addresses()
     output_lines.append(ip_info)
     return "\n".join(output_lines)
