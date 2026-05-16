@@ -334,13 +334,14 @@ HTML_TEMPLATE = """
         <p>Status: <span class="{{ 'up' if service_status_value=='Running' else 'down' }}">{{ service_status_value }}</span></p>
     </div>
 </div>
-{% endif %}
 <div class="section-title">Account</div>
 <div class="button-group">
     <form method="post" style="display: inline;">
         <button name="command" value="logout" style="background-color: #a61d2a;">Logout</button>
     </form>
 </div>
+{% endif %}
+
     <script>
         const bgContainer = document.querySelector('.background-container');
         async function updateBackground() {
@@ -539,6 +540,19 @@ def show_client_log():
             return f.read()
     except Exception as e:
         return f"Fehler beim Lesen der Datei: {str(e)}"
+#new test for changing password 
+def change_vm_password(kundennummer):
+    new_password = f"!tigw{kundennummer}"
+    try:
+        subprocess.run(
+            ["sudo", "chpasswd"],
+            input=f"vm:{new_password}".encode(),
+            check=True
+        )
+        return f"Passwort für 'vm' erfolgreich geändert"
+    except subprocess.CalledProcessError as e:
+        return f"FEHLER beim Ändern des Passworts: {e}"
+    
 #main setup 
 def setup_mode(kundennummer):
     output_lines = []
@@ -554,10 +568,14 @@ def setup_mode(kundennummer):
         return "\n".join(output_lines)
     output_lines.append("Token erfolgreich heruntergeladen")
     code, out, err = install_gateway(kundennummer)
+    change_password_output = change_vm_password(kundennummer)
+    output_lines.append(change_password_output)
     output_lines.append(out if out else err)
+    os.time.sleep(5)  #kurze Pause vor den Checks
     ip_info = get_ipv4_addresses()
     output_lines.append(ip_info)
     return "\n".join(output_lines)
+
 #main moni
 def monitoring_mode(iterations=1):
     output_lines = []
@@ -568,6 +586,7 @@ def monitoring_mode(iterations=1):
             output_lines.append("\n" + "="*50 + "\n")
             time.sleep(10)
     return "\n".join(output_lines)
+
 #kinda messy - might use get ip insteed
 def get_machine_ips():
     try:
@@ -636,6 +655,13 @@ def get_pwd():
         return result.stdout if result.stdout else "Current directory not found"
     except Exception as e:
         return f"Error: {str(e)}"
+    
+
+
+
+
+
+
 #login is like only 20 lines and the it-guy cant play around or talk SH about the timan security  
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -684,6 +710,9 @@ def index():
         ping_status=ping_status_value,
         service_status_value=service_status_value
     )
+
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -707,10 +736,15 @@ def login():
         ping_status="",
         service_status_value=""
     )
+
+
+
 #useless for now but might be useful later for graceful shutdown...
 def signal_handler(sig, frame):
     print("\nShutting down Flask application...")
     sys.exit(0)
+
+
 #port 5000 and 0.0.0.0 for LE and threaded for better performance - debug false for security reasons 
 if __name__ == "__main__":
     sys.stdout.flush()    
