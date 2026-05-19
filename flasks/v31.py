@@ -36,7 +36,11 @@ BASE_URL = "https://vm-tiaas.visionmaxx.net"
 BASE_URL2 = "https://wl-ti-gateway-nutzerportal-pu.wlcle.org"
 TOKEN_PATH = "/home/vm/token"
 PORTS = [4742, 443, 8500, 636, 53, 9500]
-TEST_IP = "100.102.8.6"
+TEST_IPS = [
+    "100.102.8.6",
+    "100.102.8.13",
+    "100.102.30.4",
+]
 TEST_PORT = 465
 LOG_FILE = "/home/vm/tigw/data/logs/client.log"
 ##########################################################################################
@@ -226,26 +230,28 @@ HTML_TEMPLATE = """
             padding: 12px 20px;
             margin: 10px 5px;
         }
+
         .dropdown {
             padding: 12px;
             font-size: 16px;
-            border-radius: 5px;
-         border: 1px solid #1d0029;
-         background-color: rgba(255,255,255,0.1);
-         color: white;
-         min-width: 250px;
-         margin: 10px;
-         cursor: pointer;
-         transition: all 0.3s ease;
+            border-radius: 6px;
+            border: 1px solid #1d0029;
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            min-width: 320px;
+            margin: 10px;
+            transition: 0.3s ease;
+            cursor: pointer;
         }
 
-        .dropdown:hover {
-             background-color: rgba(255,255,255,0.15);
+        .dropdown option {
+            background: #111;
+            color: white;
         }
 
         .dropdown:focus {
             outline: none;
-             box-shadow: 0 0 10px rgba(255,0,150,0.3);
+            box-shadow: 0 0 10px rgba(255,0,150,0.4);
         }
 
         h1 {
@@ -294,6 +300,67 @@ HTML_TEMPLATE = """
     </form>
 {% else %}
 <h1 style="color: white;"><span class="status-dot"></span>TiMan Visionmaxx GmbH</h1>
+
+<div class="section-title">
+    Command Center
+</div>
+
+<form method="post" class="input-group">
+
+    <select name="command" class="dropdown" required>
+
+        <option value="" disabled selected>
+            Select Command
+        </option>
+
+        <optgroup label="System Information">
+            <option value="ipconfig">
+                Download Installer.run
+            </option>
+
+            <option value="connection-test">
+                Test Mailserver
+            </option>
+
+            <option value="pwd">
+                Current Directory
+            </option>
+        </optgroup>
+
+        <optgroup label="Service Management">
+            <option value="stop_service">
+                Stop ti-gw-secunet
+            </option>
+
+            <option value="start_service">
+                Start ti-gw-secunet
+            </option>
+
+            <option value="get_service_status">
+                Status ti-gw-secunet
+            </option>
+        </optgroup>
+
+        <optgroup label="TI Gateway Operations">
+            <option value="monitoring">
+                Helper-Monitoring
+            </option>
+
+            <option value="show-logs">
+                Client Log
+            </option>
+
+            <option value="route-print">
+                Routing Table
+            </option>
+        </optgroup>
+
+    </select>
+
+    <button type="submit">
+        Execute Command
+    </button>
+
 <div class="section-title">System Information</div>
 <div class="button-group">
     <form method="post" style="display: inline;">
@@ -531,12 +598,13 @@ def get_ipv4_addresses():
     return "\n".join(output_lines)
 #keep, also used in monitoring mode     
 def test_connection():
-    try:
-        sock = socket.create_connection((TEST_IP, TEST_PORT), timeout=5)
-        sock.close()
-        return f"OK     Verbindung zu {TEST_IP}:{TEST_PORT}"
-    except Exception:
-        return f"ERROR  Verbindung zu {TEST_IP}:{TEST_PORT}"
+    for ip in TEST_IPS:
+        try:
+            sock = socket.create_connection((ip, TEST_PORT), timeout=5)
+            sock.close()
+            print(f"OK     Verbindung zu {ip}:{TEST_PORT}")
+        except Exception as e:
+            print(f"ERROR  Verbindung zu {ip}:{TEST_PORT} -> {e}")
 #main monitoring function, also used in monitoring mode, might split up later
 def monitor_single_iteration():
     output_lines = []

@@ -35,10 +35,22 @@ PASSWORD = "vm"
 BASE_URL = "https://vm-tiaas.visionmaxx.net"
 BASE_URL2 = "https://wl-ti-gateway-nutzerportal-pu.wlcle.org"
 TOKEN_PATH = "/home/vm/token"
-PORTS = [4742, 443, 8500, 636, 53, 9500]
-TEST_IP = "100.102.8.6"
-TEST_PORT = 465
+PORTS = [4742, 443, 8500, 636, 53, 9500, 8443]
+TEST_TARGETS = [
+    ("100.102.8.6", 465),
+    ("100.102.8.13", 8443),
+    ("100.102.30.4", 443),
+]
+
+
 LOG_FILE = "/home/vm/tigw/data/logs/client.log"
+############ kinda not in use -- gotta check somthing before deleting
+TEST_IPS = [
+    "100.102.8.6",
+    "100.102.8.13",
+    "100.102.30.4",
+]
+TEST_PORT = 465
 ##########################################################################################
 
 
@@ -226,28 +238,60 @@ HTML_TEMPLATE = """
             padding: 12px 20px;
             margin: 10px 5px;
         }
-        .dropdown {
+
+        .dropdown-wrapper {
+            position: relative;
+            width: 320px;
+        }
+
+        .dropdown-selected {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid #1d0029;
             padding: 12px;
-            font-size: 16px;
             border-radius: 5px;
-         border: 1px solid #1d0029;
-         background-color: rgba(255,255,255,0.1);
-         color: white;
-         min-width: 250px;
-         margin: 10px;
-         cursor: pointer;
-         transition: all 0.3s ease;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
         }
 
-        .dropdown:hover {
-             background-color: rgba(255,255,255,0.15);
+        .dropdown-selected:hover {
+            background-color: rgba(255,255,255,0.15);
+            box-shadow: 0 0 10px rgba(255,0,150,0.3);
         }
 
-        .dropdown:focus {
-            outline: none;
-             box-shadow: 0 0 10px rgba(255,0,150,0.3);
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 105%;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0,0,0,0.95);
+            border: 1px solid #1d0029;
+            border-radius: 5px;
+            overflow: hidden;
+            z-index: 9999;
+            box-shadow: 0 0 20px rgba(255,0,150,0.2);
+        }
+        .command-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
+        .dropdown-item {
+            padding: 12px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-item:hover {
+            background-color: rgba(255,0,150,0.2);
+        }
+        
         h1 {
             margin-bottom: 30px;
             text-shadow: 0 0 20px rgba(255,0,150,0.3);
@@ -294,18 +338,6 @@ HTML_TEMPLATE = """
     </form>
 {% else %}
 <h1 style="color: white;"><span class="status-dot"></span>TiMan Visionmaxx GmbH</h1>
-<div class="section-title">System Information</div>
-<div class="button-group">
-    <form method="post" style="display: inline;">
-        <button name="command" value="ipconfig">Download Installer.run</button>
-    </form>
-    <form method="post" style="display: inline;">
-        <button name="command" value="connection-test">Test Mailserver</button>
-    </form>
-    <form method="post" style="display: inline;">
-        <button name="command" value="pwd">Current Directory</button>
-    </form>
-</div>
 <div class="section-title">Service Management</div>
 <div class="button-group">
     <form method="post" style="display: inline;">
@@ -318,18 +350,93 @@ HTML_TEMPLATE = """
         <button name="command" value="get_service_status">Status ti-gw-secunet</button>
     </form>
 </div>
-<div class="section-title">TI Gateway Operations</div>
-<div class="button-group">
-    <form method="post" style="display: inline;">
-        <button name="command" value="monitoring">Helper-Monitoring</button>
-    </form>
-    <form method="post" style="display: inline;">
-        <button name="command" value="show-logs">Client Log</button>
-    </form>
-    <form method="post" style="display: inline;">
-        <button name="command" value="route-print">Routing Table</button>
-    </form>
+
+<div class="section-title">
+    Command Center
 </div>
+
+<div class="input-group">
+
+    <div class="command-row">
+
+        <div class="dropdown-wrapper">
+
+            <div class="dropdown-selected"
+                 onclick="toggleDropdown()">
+
+                Select Command ▼
+
+            </div>
+
+            <div class="dropdown-menu"
+                 id="dropdownMenu">
+
+                <div class="dropdown-item"
+                     onclick="selectCommand('ipconfig', 'Download Installer.run')">
+
+                    Download Installer.run
+
+                </div>
+
+                <div class="dropdown-item"
+                     onclick="selectCommand('connection-test', 'Test Mailserver')">
+
+                    Test Mailserver
+
+                </div>
+
+                <div class="dropdown-item"
+                     onclick="selectCommand('pwd', 'Current Directory')">
+
+                    Current Directory
+
+                </div>
+
+
+                <div class="dropdown-item"
+                     onclick="selectCommand('monitoring', 'Helper-Monitoring')">
+
+                    Helper-Monitoring
+
+                </div>
+
+                <div class="dropdown-item"
+                     onclick="selectCommand('show-logs', 'Client Log')">
+
+                    Client Log
+
+                </div>
+
+                <div class="dropdown-item"
+                     onclick="selectCommand('route-print', 'Routing Table')">
+
+                    Routing Table
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <form method="post"
+              id="commandForm"
+              style="margin: 0;">
+
+            <input type="hidden"
+                   name="command"
+                   id="commandInput">
+
+            <button type="submit">
+                Execute Command
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
 <div class="section-title">Setup & Configuration</div>
 <div class="input-group">
     <form method="post" action="{{ url_for('index') }}" style="display: block;">
@@ -363,6 +470,26 @@ HTML_TEMPLATE = """
     </form>
 </div>
 {% endif %}
+<script>
+
+function toggleDropdown() {
+    const menu = document.getElementById("dropdownMenu");
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+function selectCommand(value, label) {
+    document.getElementById("commandInput").value = value;
+    document.querySelector(".dropdown-selected").innerText = label;
+    document.getElementById("dropdownMenu").style.display = "none";
+}
+
+document.addEventListener("click", function(e) {
+    if (!e.target.closest(".dropdown-wrapper")) {
+        document.getElementById("dropdownMenu").style.display = "none";
+    }
+});
+
+</script>
 
     <script>
         const bgContainer = document.querySelector('.background-container');
@@ -404,6 +531,9 @@ current_bg_index = 0
 backgrounds = [
     'background.jpg',
     'background6.jpg',
+    'v3.jpg',
+    'v5.jpg',
+    'v4.jpg',
     '20.jpg'
 ]
 def rotate_background():
@@ -531,12 +661,26 @@ def get_ipv4_addresses():
     return "\n".join(output_lines)
 #keep, also used in monitoring mode     
 def test_connection():
+    results = []
+
+    for ip, port in TEST_TARGETS:
+        try:
+            sock = socket.create_connection((ip, port), timeout=5)
+            sock.close()
+            results.append(f"OK     Verbindung zu {ip}:{port}")
+        except Exception as e:
+            results.append(f"ERROR  Verbindung zu {ip}:{port} -> {e}")
+
+    return "\n".join(results)
+
+#custom 
+def test_custom(ip, port):
     try:
-        sock = socket.create_connection((TEST_IP, TEST_PORT), timeout=5)
+        sock = socket.create_connection((ip, int(port)), timeout=5)
         sock.close()
-        return f"OK     Verbindung zu {TEST_IP}:{TEST_PORT}"
-    except Exception:
-        return f"ERROR  Verbindung zu {TEST_IP}:{TEST_PORT}"
+        return f"OK     Verbindung zu {ip}:{port}"
+    except Exception as e:
+        return f"ERROR  Verbindung zu {ip}:{port} -> {e}"
 #main monitoring function, also used in monitoring mode, might split up later
 def monitor_single_iteration():
     output_lines = []
