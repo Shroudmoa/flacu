@@ -1,6 +1,6 @@
 import requests
 from shellCmd import run_cmd
-
+import os
 
 def download_token(kundennummer: str) -> bool:
     # ftp_url = "https://vm-tiaas.visionmaxx.net"
@@ -36,6 +36,8 @@ def install_gateway(kundennummer: str) -> tuple[int, str, str]:
     tig_installer_path = "/home/vm/ti-gw-installer-linux.run"
     with open(tig_installer_path, "wb") as f:
         f.write(response.content)
+    os.chmod(tig_installer_path, 0o755)
     tocken_path = "/home/vm/token"
     cmd = f"""sudo /home/vm/ti-gw-installer-linux.run --serviceName ti-gw-secunet --prefix /home/vm/tigw --base64String "$(cat {tocken_path})" --clientType device --installermode normal --enable-components clientService,gatewayMode --mode unattended --updateTimeslot 22,Europe/Berlin"""
     return run_cmd(cmd)
+
