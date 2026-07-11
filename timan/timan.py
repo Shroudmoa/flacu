@@ -1,5 +1,4 @@
 import subprocess
-
 import os
 from reboot import reboot_machine
 import sys
@@ -12,6 +11,7 @@ from installationStatus import check_installation_status
 from uninstall import uninstall
 from dirty_uninstall import dirty_uninstall
 from shellCmd import run
+from cronmanager import add_daily_reboot
 
 from maschinemanagment import show_client_log, monitoring_mode, get_routing_table
 
@@ -30,9 +30,6 @@ from check import (
 from serviceMan import service_status, start_service, stop_service
 
 from flask import Flask, render_template_string, request, redirect, url_for, session
-
-
-
 
 ##########################################################################################
 
@@ -589,8 +586,7 @@ HTML_TEMPLATE = """
 </head>
 
 <body>
-
- {% if not session.get("logged_in") %}
+{% if not session.get("logged_in") %}
 
     <h2>Login TiMan</h2>
 
@@ -901,6 +897,13 @@ HTML_TEMPLATE = """
                     User Manager
 
                 </div>
+
+                <div class="dropdown-item"
+                    onclick="selectSetupCommand('daily-reboot', 'Daily Reboot')">
+
+                    Daily Reboot
+
+                </div>
                 <div class="dropdown-item"
                     onclick="selectSetupCommand('ip-config', 'IP Configuration')">
 
@@ -986,6 +989,14 @@ HTML_TEMPLATE = """
                 name="username"
                 form="setupForm"
                 placeholder="Username">
+
+            <input type="number"
+                id="rebootHourField"
+                name="reboot_hour"
+                form="setupForm"
+                placeholder="Hour (0-23)"
+                min="0"
+                max="23">
 
 
             <input type="password"
@@ -1098,7 +1109,7 @@ function selectSetupCommand(value, label) {
 
     const kdn = document.getElementById("kundennummerField");
     const password = document.getElementById("passwordField");
-
+    const rebootHour = document.getElementById("rebootHourField");
 
     const ip = document.getElementById("ipField");
     const mask = document.getElementById("maskField");
@@ -1113,7 +1124,7 @@ function selectSetupCommand(value, label) {
     // alles erstmal verstecken
 
     fields.style.display = "none";
-
+    rebootHour.style.display = "none";
     kdn.style.display = "none";
 
     password.style.display = "none";
@@ -1186,6 +1197,15 @@ function selectSetupCommand(value, label) {
         user.style.display = "inline-block";
 
         userPassword.style.display = "inline-block";
+
+    }
+    else if (value === "daily-reboot") {
+
+    fields.style.display = "block";
+
+    password.style.display = "inline-block";
+
+    rebootHour.style.display = "inline-block";
 
     }
 
@@ -1262,7 +1282,6 @@ document.addEventListener("click", function(e) {
 
 
 </script>
-
 
 </body>
 
@@ -1464,7 +1483,19 @@ def index():
                     output = change_user_password(
                         username,
                         new_password
-                    )
+                            )
+        elif cmd_key == "daily-reboot":
+
+            setup_password = request.form.get("setup_password")
+
+            if setup_password != "supersecret":
+                output = "Invalid setup password"
+
+            else:
+
+                hour = request.form.get("reboot_hour")
+
+                output = add_daily_reboot(hour)
         elif cmd_key == "reboot":
 
             output = reboot_machine()
