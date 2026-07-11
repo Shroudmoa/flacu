@@ -6,7 +6,7 @@ import subprocess
 
 
 
-UNINSTALL_SCRIPT = "/home/vm/tigw/uninstall_client"
+UNINSTALL_SCRIPT = "/home/vm/tigw/uninstall-client"
 
 
 
@@ -42,7 +42,8 @@ def uninstall():
 
         output.append(
 
-            "chmod +x /home/vm/tigw/uninstall_client completed"
+            "chmod +x /home/vm/tigw/uninstall-client completed"
+
 
         )
 
