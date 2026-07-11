@@ -31,33 +31,8 @@ from serviceMan import service_status, start_service, stop_service
 
 from flask import Flask, render_template_string, request, redirect, url_for, session
 
-import shutil
 
 
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-STATIC_DIR = os.path.join(SCRIPT_DIR, "static")
-
-os.makedirs(STATIC_DIR, exist_ok=True)
-
-background_src = os.getcwd() + "strict/background.jpg"
-
-background_src = os.getcwd() + "strict/background.jpg"
-
-background_dst = os.path.join(STATIC_DIR, "background.jpg")
-
-if os.path.exists(background_src):
-
-    shutil.copy(background_src, background_dst)
-
-logo_src = os.getcwd() + "strict/vm.jpg"
-
-logo_dst = os.path.join(STATIC_DIR, "vm.jpg")
-
-if os.path.exists(logo_src):
-
-    shutil.copy(logo_src, logo_dst)
 
 ##########################################################################################
 
@@ -615,11 +590,7 @@ HTML_TEMPLATE = """
 
 <body>
 
-    <div class="background-container"></div>
-
-    <img src="{{ url_for('static', filename='vm.jpg') }}" class="watermark" alt="Watermark">
-
-{% if not session.get("logged_in") %}
+ {% if not session.get("logged_in") %}
 
     <h2>Login TiMan</h2>
 
@@ -1293,71 +1264,6 @@ document.addEventListener("click", function(e) {
 </script>
 
 
-
-    <script>
-
-        const bgContainer = document.querySelector('.background-container');
-
-        async function updateBackground() {
-
-            try {
-
-                const response = await fetch('/get-background');
-
-                const data = await response.json();
-
-                const newBg = `{{ url_for('static', filename='') }}${data.background}`;
-
-                // Fade out
-
-                bgContainer.classList.add('fade-out');
-
-                // Wait for fade out, then change image and fade in
-
-                setTimeout(() => {
-
-                    bgContainer.style.backgroundImage = `url('${newBg}')`;
-
-                    bgContainer.classList.remove('fade-out');
-
-                }, 1500); // Half of the transition time
-
-            } catch (error) {
-
-                console.error('Failed to update background:', error);
-
-            }
-
-        }
-
-        // Update background every ... 
-
-        setInterval(updateBackground, 20000); // 20 seconds 
-
-        // Set initial background
-
-        updateBackground();
-
-        // Add visual feedback on form submission
-
-        document.querySelectorAll('form').forEach(form => {
-
-            form.addEventListener('submit', function() {
-
-                const buttons = this.querySelectorAll('button[type="submit"]');
-
-                buttons.forEach(btn => {
-
-                    btn.style.opacity = '0.7';
-
-                });
-
-            });
-
-        });
-
-    </script>
-
 </body>
 
 </html>
@@ -1365,16 +1271,6 @@ document.addEventListener("click", function(e) {
 """
 
 
-
-
-
-@app.route("/get-background")
-
-def get_background():
-
-    # return {"background": backgrounds[current_bg_index]}  # also kinda useless
-
-    return {"background": "background.jpg"}
 
 
 

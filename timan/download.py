@@ -26,7 +26,7 @@ def install_gateway(kundennummer: str) -> tuple[int, str, str]:
     if kundennummer == "":
         return (-1, "error", "kundernummer ist nicht angegeben worden")
     tigwDownloadUrl = (
-        "https://vm-tiaas.visionmaxx.net/ti-gw/installer/ti-gw-installer-linux.run"
+        "https://wl-ti-gateway-nutzerportal-pu.wlcle.org/ccp/connectivity-repo/files/client-installer-linux/default/latest"
     )
     download_token(kundennummer)
     response = requests.get(tigwDownloadUrl)
