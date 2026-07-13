@@ -1,19 +1,32 @@
 import subprocess
+
 import os
+
 from reboot import reboot_machine
+
 import sys
+
 from usermanager import change_user_password
+
 from install import installTiManService, setup_mode
+
 from ipchanger import status as ip_status, set_static, set_dhcp
+
 from dnschanger import get_dns, set_dns
+
 import signal
+
 from installationStatus import check_installation_status
+
 from uninstall import uninstall
+
 from dirty_uninstall import dirty_uninstall
+
 from shellCmd import run
+
 from cronmanager import add_daily_reboot
 
-from maschinemanagment import show_client_log, monitoring_mode, get_routing_table
+from maschinemanagment import show_client_log, monitoring_mode
 
 from check import (
 
@@ -37,9 +50,11 @@ app = Flask(__name__)
 
 app.secret_key = "lbBo85tuAguLZgMMAZisKp6q5Cohkjyy8ikYqtWb"
 
-username = "vm"
+USER = "vm"
 
-password = "vm"
+PASS = "vm"
+
+ADMIN_PASSWORD = "supersecret"
 
 # we can change this later
 
@@ -413,8 +428,6 @@ HTML_TEMPLATE = """
 
         }
 
-
-
         .dropdown-wrapper {
 
             position: relative;
@@ -422,8 +435,6 @@ HTML_TEMPLATE = """
             width: 320px;
 
         }
-
-
 
         .dropdown-selected {
 
@@ -445,8 +456,6 @@ HTML_TEMPLATE = """
 
         }
 
-
-
         .dropdown-selected:hover {
 
             background-color: rgba(255,255,255,0.15);
@@ -454,8 +463,6 @@ HTML_TEMPLATE = """
             box-shadow: 0 0 10px rgba(255,0,150,0.3);
 
         }
-
-
 
         .dropdown-menu {
 
@@ -497,8 +504,6 @@ HTML_TEMPLATE = """
 
         }
 
-
-
         .dropdown-item {
 
             padding: 12px;
@@ -511,15 +516,11 @@ HTML_TEMPLATE = """
 
         }
 
-
-
         .dropdown-item:hover {
 
             background-color: rgba(255,0,150,0.2);
 
         }
-
-        
 
         h1 {
 
@@ -586,6 +587,7 @@ HTML_TEMPLATE = """
 </head>
 
 <body>
+
 {% if not session.get("logged_in") %}
 
     <h2>Login TiMan</h2>
@@ -610,41 +612,105 @@ HTML_TEMPLATE = """
 
 <div class="section-title">Service Management</div>
 
+
+
+
+
 <div class="button-group">
 
-    <form method="post" style="display: inline;">
 
-        <button name="command" value="stop_service">Stop ti-gw-secunet</button>
+
+    <form method="post" style="display:inline;">
+
+        <button name="command" value="stop_service">
+
+            Stop ti-gw-secunet
+
+        </button>
+
+    </form>
+
+
+
+    <form method="post" style="display:inline;">
+
+        <button name="command" value="start_service">
+
+            Start ti-gw-secunet
+
+        </button>
 
     </form>
 
-    <form method="post" style="display: inline;">
 
-        <button name="command" value="start_service">Start ti-gw-secunet</button>
+
+    <form method="post" style="display:inline;">
+
+        <button 
+
+            name="command" 
+
+            value="reboot"
+
+            onclick="return askSensitivePassword();">
+
+            Reboot VM
+
+        </button>   
 
     </form>
 
-    <form method="post" style="display: inline;">
 
-        <button name="command" value="get_service_status">Status ti-gw-secunet</button>
-
-    </form>
 
 </div>
 
 
 
+
+
+<div class="button-group">
+
+
+
+    <form method="post" style="display:inline;">
+
+        <button name="command" value="installation-status">
+
+            Installation Status
+
+        </button>
+
+    </form>
+
+
+
+    <form method="post" style="display:inline;">
+
+        <button name="command" value="show-logs">
+
+            Client Log
+
+        </button>
+
+    </form>
+
+
+
+</div>
+
+
+
+
+
 <div class="section-title">
 
-    Command Center
+    Management Center
 
 </div>
 
 
 
 <div class="input-group">
-
-
 
     <div class="command-row">
 
@@ -658,11 +724,7 @@ HTML_TEMPLATE = """
 
                  onclick="toggleDropdown()">
 
-
-
                 Select Command ▼
-
-
 
             </div>
 
@@ -676,62 +738,29 @@ HTML_TEMPLATE = """
 
                 <div class="dropdown-item"
 
-                     onclick="selectCommand('connection-test', 'Test Mailserver')">
-
-
-
-                    Test Mailserver
-
-
-
-                </div>
-
-                <div class="dropdown-item"
-
-                    onclick="selectCommand('custom-connection-test', 'Custom Connection Test')">
-
-
+                     onclick="selectCommand('custom-connection-test','Custom Connection Test')">
 
                     Custom Connection Test
 
-
-
                 </div>
-
-                <div class="dropdown-item"
-
-                     onclick="selectCommand('pwd', 'Current Directory')">
-
-
-
-                    Current Directory
-
-
-
-                </div>
-                
-                <div class="dropdown-item"
-
-                    onclick="selectCommand('reboot', 'Reboot Machine')">
-
-
-
-                   Reboot Machine
-
-
-
-                </div>
-
 
 
 
                 <div class="dropdown-item"
 
-                     onclick="selectCommand('monitoring', 'Helper-Monitoring')">
+                     onclick="selectCommand('monitoring','Helper-Monitoring')">
 
                     Helper-Monitoring
 
+                </div>
 
+
+
+                <div class="dropdown-item"
+
+                     onclick="selectCommand('ip-config','IP Configuration')">
+
+                    IP Configuration
 
                 </div>
 
@@ -739,27 +768,21 @@ HTML_TEMPLATE = """
 
                 <div class="dropdown-item"
 
-                     onclick="selectCommand('show-logs', 'Client Log')">
+                     onclick="selectCommand('dns-config','DNS Configuration')">
 
-
-
-                    Client Log
-
-
+                    DNS Configuration
 
                 </div>
 
 
 
+
+
                 <div class="dropdown-item"
 
-                     onclick="selectCommand('route-print', 'Routing Table')">
+                     onclick="selectCommand('daily-reboot','Daily Reboot')">
 
-
-
-                    Routing Table
-
-
+                    Daily Reboot
 
                 </div>
 
@@ -771,57 +794,39 @@ HTML_TEMPLATE = """
 
         </div>
 
-        <div id="customTestFields"
-
-            style="display:none; margin-top:15px;">
-
-
-
-            <input type="text"
-
-                name="custom_ip"
-
-                form="commandForm"
-
-                placeholder="IP Address">
-
-
-
-            <input type="number"
-
-                name="custom_port"
-
-                form="commandForm"
-
-                placeholder="Port">
-
-
-
-        </div>
-
 
 
 
 
         <form method="post"
 
-              id="commandForm"
+            id="commandForm"
 
-              style="margin: 0;">
+            style="margin:0;">
 
 
 
             <input type="hidden"
 
-                   name="command"
+                name="command"
 
-                   id="commandInput">
+                id="commandInput">
 
 
 
-            <button type="submit">
+            <input type="hidden"
 
-                Execute Command
+                name="admin_password"
+
+                id="adminPasswordInput">
+
+
+
+            <button type="submit"
+
+                    onclick="return checkSensitiveCommand();">
+
+                AUSFÜHREN
 
             </button>
 
@@ -832,6 +837,144 @@ HTML_TEMPLATE = """
 
 
     </div>
+
+</div>
+
+
+
+
+
+<div id="managementFields" style="display:none; margin-top:15px;">
+
+
+
+
+
+<input type="text"
+
+id="custom_ip"
+
+name="custom_ip"
+
+form="commandForm"
+
+placeholder="IP Address">
+
+
+
+<input type="number"
+
+id="custom_port"
+
+name="custom_port"
+
+form="commandForm"
+
+placeholder="Port">
+
+
+
+
+
+<input type="number"
+
+id="rebootHourField"
+
+name="reboot_hour"
+
+form="commandForm"
+
+placeholder="Hour (0-23)"
+
+min="0"
+
+max="23">
+
+
+
+
+
+<input type="text"
+
+id="ipField"
+
+name="ip_address"
+
+form="commandForm"
+
+placeholder="IP Address">
+
+
+
+
+
+<input type="text"
+
+id="maskField"
+
+name="subnet"
+
+form="commandForm"
+
+placeholder="CIDR">
+
+
+
+
+
+<input type="text"
+
+id="gatewayField"
+
+name="gateway"
+
+form="commandForm"
+
+placeholder="Gateway">
+
+
+
+<form method="post" id="dhcpForm" style="display:inline;">
+
+    <input type="hidden" name="command" value="ip-dhcp">
+
+    <button id="dhcpButton"
+
+            type="submit"
+
+            style="display:none;">
+
+        Enable DHCP
+
+    </button>
+
+</form>
+
+
+
+<input type="text"
+
+id="dns1Field"
+
+name="dns1"
+
+form="commandForm"
+
+placeholder="Primary DNS">
+
+
+
+
+
+<input type="text"
+
+id="dns2Field"
+
+name="dns2"
+
+form="commandForm"
+
+placeholder="Secondary DNS">
 
 
 
@@ -848,35 +991,37 @@ HTML_TEMPLATE = """
         <div class="dropdown-wrapper">
 
             <div class="dropdown-selected"
+
                  id="setupSelected"
+
                  onclick="toggleSetupDropdown()">
 
                 Select Setup Action ▼
 
             </div>
 
-
             <div class="dropdown-menu"
+
                  id="setupDropdownMenu">
 
-
                 <div class="dropdown-item"
+
                      onclick="selectSetupCommand('install', 'Install')">
 
                     Install
 
                 </div>
 
-
                 <div class="dropdown-item"
+
                      onclick="selectSetupCommand('uninstall', 'Uninstall')">
 
                     Uninstall
 
                 </div>
 
-
                 <div class="dropdown-item"
+
                      onclick="selectSetupCommand('dirty-uninstall', 'Dirty Uninstall')">
 
                     Dirty Uninstall
@@ -884,155 +1029,97 @@ HTML_TEMPLATE = """
                 </div>
 
 
-                <div class="dropdown-item"
-                     onclick="selectSetupCommand('installation-status', 'Installation Status')">
-
-                    Installation Status
-
-                </div>
 
                 <div class="dropdown-item"
+
                     onclick="selectSetupCommand('user-manager', 'User Manager')">
 
                     User Manager
 
                 </div>
 
-                <div class="dropdown-item"
-                    onclick="selectSetupCommand('daily-reboot', 'Daily Reboot')">
-
-                    Daily Reboot
-
-                </div>
-                <div class="dropdown-item"
-                    onclick="selectSetupCommand('ip-config', 'IP Configuration')">
-
-                    IP Configuration
-
-                </div>
-
-                <div class="dropdown-item"
-                    onclick="selectSetupCommand('ip-dhcp', 'Enable DHCP')">
-
-                    Enable DHCP
-
-                </div>
 
 
 
-                <div class="dropdown-item"
-                    onclick="selectSetupCommand('dns-config', 'DNS Configuration')">
-
-                    DNS Configuration
-
-                </div>
 
             </div>
 
         </div>
 
-
-
         <div id="setupFields"
+
              style="display:none; margin-top:15px;">
 
-
             <input type="text"
+
                    id="kundennummerField"
+
                    name="kundennummer"
+
                    form="setupForm"
+
                    placeholder="Kundennummer">
 
-
             <input type="password"
+
                    id="passwordField"
+
                    name="setup_password"
+
                    form="setupForm"
+
                    placeholder="Password">
-            <input
-                type="text"
-                id="ipField"
-                name="ip_address"
-                form="setupForm"
-                placeholder="IP Address">
 
-            <input
-                type="text"
-                id="maskField"
-                name="subnet"
-                form="setupForm"
-                placeholder="CIDR (24)">
 
-            <input
-                type="text"
-                id="gatewayField"
-                name="gateway"
-                form="setupForm"
-                placeholder="Gateway">
-
-            <input
-                type="text"
-                id="dns1Field"
-                name="dns1"
-                form="setupForm"
-                placeholder="Primary DNS">
-
-            <input
-                type="text"
-                id="dns2Field"
-                name="dns2"
-                form="setupForm"
-                placeholder="Secondary DNS">
 
             <input type="text"
+
                 id="userField"
+
                 name="username"
+
                 form="setupForm"
+
                 placeholder="Username">
 
-            <input type="number"
-                id="rebootHourField"
-                name="reboot_hour"
-                form="setupForm"
-                placeholder="Hour (0-23)"
-                min="0"
-                max="23">
 
 
             <input type="password"
-                id="userPasswordField"
-                name="user_password"
-                form="setupForm"
-                placeholder="New Password">
 
+                id="userPasswordField"
+
+                name="user_password"
+
+                form="setupForm"
+
+                placeholder="New Password">
 
         </div>
 
-
-
         <form method="post"
+
               id="setupForm"
+
               style="margin:0;">
 
-
             <input type="hidden"
-                   name="command"
-                   id="setupCommandInput">
 
+                   name="command"
+
+                   id="setupCommandInput">
 
             <button type="submit">
 
-                Execute Setup
+                AUSFÜHREN
 
             </button>
 
-
         </form>
-
 
     </div>
 
 </div>
+
 {% if output %}
 
 <div class="section-title">Output</div>
@@ -1084,17 +1171,52 @@ HTML_TEMPLATE = """
 {% endif %}
 
 <script>
+
 function toggleSetupDropdown() {
 
     const menu = document.getElementById("setupDropdownMenu");
 
     menu.style.display =
+
         menu.style.display === "block"
+
         ? "none"
+
         : "block";
 
 }
 
+function askSensitivePassword() {
+
+    let password = prompt("Enter admin password:");
+
+
+
+    if (password === null) {
+
+        return false; // user pressed cancel
+
+    }
+
+
+
+    let input = document.createElement("input");
+
+    input.type = "hidden";
+
+    input.name = "admin_password";
+
+    input.value = password;
+
+
+
+    event.target.closest("form").appendChild(input);
+
+
+
+    return true;
+
+}
 
 function selectSetupCommand(value, label) {
 
@@ -1105,41 +1227,34 @@ function selectSetupCommand(value, label) {
     document.getElementById("setupDropdownMenu").style.display = "none";
 
 
+
     const fields = document.getElementById("setupFields");
 
+
+
     const kdn = document.getElementById("kundennummerField");
+
     const password = document.getElementById("passwordField");
-    const rebootHour = document.getElementById("rebootHourField");
 
-    const ip = document.getElementById("ipField");
-    const mask = document.getElementById("maskField");
-    const gateway = document.getElementById("gatewayField");
-
-    const dns1 = document.getElementById("dns1Field");
-    const dns2 = document.getElementById("dns2Field");
     const user = document.getElementById("userField");
+
     const userPassword = document.getElementById("userPasswordField");
 
 
-    // alles erstmal verstecken
 
     fields.style.display = "none";
-    rebootHour.style.display = "none";
+
+
+
     kdn.style.display = "none";
 
     password.style.display = "none";
 
-    ip.style.display = "none";
-
-    mask.style.display = "none";
-
-    gateway.style.display = "none";
-
-    dns1.style.display = "none";
-
-    dns2.style.display = "none";
     user.style.display = "none";
+
     userPassword.style.display = "none";
+
+
 
 
 
@@ -1151,43 +1266,26 @@ function selectSetupCommand(value, label) {
 
         password.style.display = "inline-block";
 
+    }
 
-    } 
-    
+
+
     else if (
+
         value === "uninstall" ||
+
         value === "dirty-uninstall"
+
     ) {
 
         fields.style.display = "block";
 
         password.style.display = "inline-block";
 
-
     }
 
 
-    else if (value === "ip-config") {
 
-        fields.style.display = "block";
-
-        password.style.display = "inline-block";
-
-        ip.style.display = "inline-block";
-
-        mask.style.display = "inline-block";
-
-        gateway.style.display = "inline-block";
-
-
-    }
-    else if (value === "ip-dhcp") {
-
-        fields.style.display = "block";
-
-        password.style.display = "inline-block";
-
-    }
     else if (value === "user-manager") {
 
         fields.style.display = "block";
@@ -1199,30 +1297,45 @@ function selectSetupCommand(value, label) {
         userPassword.style.display = "inline-block";
 
     }
-    else if (value === "daily-reboot") {
-
-    fields.style.display = "block";
-
-    password.style.display = "inline-block";
-
-    rebootHour.style.display = "inline-block";
-
-    }
-
-    else if (value === "dns-config") {
-
-        fields.style.display = "block";
-
-        password.style.display = "inline-block";
-
-        dns1.style.display = "inline-block";
-
-        dns2.style.display = "inline-block";
-
-    }
-
 
 }
+
+function checkSensitiveCommand() {
+
+
+
+    let command = document.getElementById("commandInput").value;
+
+
+
+    if (command === "dns-config" ||
+
+        command === "ip-config") {
+
+
+
+        let password = prompt("Enter admin password:");
+
+
+
+        if (password === null) {
+
+            return false;
+
+        }
+
+
+
+        document.getElementById("adminPasswordInput").value = password;
+
+    }
+
+
+
+    return true;
+
+}
+
 function toggleDropdown() {
 
     const menu = document.getElementById("dropdownMenu");
@@ -1231,43 +1344,151 @@ function toggleDropdown() {
 
 }
 
-
-
 function selectCommand(value, label) {
-
-
 
     document.getElementById("commandInput").value = value;
 
-
-
     document.querySelector(".dropdown-selected").innerText = label;
-
-
 
     document.getElementById("dropdownMenu").style.display = "none";
 
 
 
-    const customFields = document.getElementById("customTestFields");
+    const fields = document.getElementById("managementFields");
+
+    custom_ip.style.display = "none";
+
+    custom_port.style.display = "none";
+
+    const password = document.getElementById("passwordField");
+
+    const rebootHour = document.getElementById("rebootHourField");
+
+    const ip = document.getElementById("ipField");
+
+    const mask = document.getElementById("maskField");
+
+    const gateway = document.getElementById("gatewayField");
+
+    const dns1 = document.getElementById("dns1Field");
+
+    const dns2 = document.getElementById("dns2Field");
+
+    const dhcpButton = document.getElementById("dhcpButton");
 
 
 
-    if (value === "custom-connection-test") {
+    dhcpButton.style.display = "none";
 
-        customFields.style.display = "block";
 
-    } else {
 
-        customFields.style.display = "none";
 
-    }
+
+    // Hide everything first
+
+    fields.style.display = "none";
+
+    fields.style.display = "none";
+
+
+
+    password.style.display = "none";
+
+    rebootHour.style.display = "none";
+
+    ip.style.display = "none";
+
+    mask.style.display = "none";
+
+    gateway.style.display = "none";
+
+    dns1.style.display = "none";
+
+    dns2.style.display = "none";
+
+
+
+if(value === "custom-connection-test") {
+
+
+
+fields.style.display="block";
+
+
+
+custom_ip.style.display="inline-block";
+
+custom_port.style.display="inline-block";
+
+
 
 }
 
 
 
 
+
+else if(value === "ip-config") {
+
+
+
+    fields.style.display = "block";
+
+
+
+    ipField.style.display = "inline-block";
+
+    maskField.style.display = "inline-block";
+
+    gatewayField.style.display = "inline-block";
+
+
+
+    dhcpButton.style.display = "inline-block";
+
+}
+
+
+
+
+
+
+
+else if(value === "dns-config") {
+
+
+
+fields.style.display="block";
+
+
+
+dns1Field.style.display="inline-block";
+
+dns2Field.style.display="inline-block";
+
+
+
+}
+
+
+
+
+
+else if(value === "daily-reboot") {
+
+
+
+fields.style.display="block";
+
+
+
+rebootHourField.style.display="inline-block";
+
+
+
+}
+
+}
 
 document.addEventListener("click", function(e) {
 
@@ -1279,8 +1500,6 @@ document.addEventListener("click", function(e) {
 
 });
 
-
-
 </script>
 
 </body>
@@ -1288,28 +1507,6 @@ document.addEventListener("click", function(e) {
 </html>
 
 """
-
-
-
-
-
-
-
-# didnt know that can be useful but it is..keep for Supporting phase so we can see if timan is running as a Service or not
-
-def get_currbindir():
-
-    try:
-
-        result = subprocess.run(["pwd"], capture_output=True, text=True, timeout=5)
-
-        return result.stdout if result.stdout else "Current directory not found"
-
-    except Exception as e:
-
-        return f"Error: {str(e)}"
-
-
 
 
 
@@ -1338,50 +1535,53 @@ def index():
             session.pop("logged_in", None)
 
             return redirect(url_for("login"))
+
         elif cmd_key == "install":
 
             kundennummer = request.form.get("kundennummer")
+
             setup_password = request.form.get("setup_password")
 
-
             if setup_password != "supersecret":
+
                 output = "Invalid setup password"
 
             elif not kundennummer:
+
                 output = "Kundennummer required"
 
             else:
+
                 output = setup_mode(kundennummer)
-
-
 
         elif cmd_key == "uninstall":
 
             setup_password = request.form.get("setup_password")
 
             if setup_password != "supersecret":
+
                 output = "Invalid setup password"
 
             else:
+
                 output = uninstall()
-
-
 
         elif cmd_key == "dirty-uninstall":
 
             setup_password = request.form.get("setup_password")
 
             if setup_password != "supersecret":
+
                 output = "Invalid setup password"
 
             else:
+
                 output = dirty_uninstall()
-
-
 
         elif cmd_key == "installation-status":
 
             output = check_installation_status()
+
         elif cmd_key == "monitoring":
 
             output = monitoring_mode(iterations=1)
@@ -1402,10 +1602,6 @@ def index():
 
             output = test_connection()
 
-        elif cmd_key == "pwd":
-
-            output = get_currbindir()
-
         elif cmd_key == "stop_service":
 
             output = stop_service()
@@ -1414,102 +1610,115 @@ def index():
 
             output = start_service()
 
-        elif cmd_key == "get_service_status":
 
-            output = service_status()
-
-        elif cmd_key == "route-print":
-
-            output = get_routing_table()
 
         elif cmd_key == "ip-config":
 
-            setup_password = request.form.get("setup_password")
+            ip = request.form.get("ip_address")
 
-            if setup_password != "supersecret":
-                output = "Invalid setup password"
+            cidr = request.form.get("subnet")
+
+            gateway = request.form.get("gateway")
+
+            if ip and cidr and gateway:
+
+                output = set_static(ip, cidr, gateway)
 
             else:
-                ip = request.form.get("ip_address")
-                cidr = request.form.get("subnet")
-                gateway = request.form.get("gateway")
 
+                output = ip_status()
 
-                if ip and cidr and gateway:
-                    output = set_static(ip, cidr, gateway)
-                else:
-                    output = ip_status()
         elif cmd_key == "dns-config":
 
-            setup_password = request.form.get("setup_password")
 
-            if setup_password != "supersecret":
-                output = "Invalid setup password"
+
+            admin_password = request.form.get("admin_password")
+
+
+
+            if admin_password != ADMIN_PASSWORD:
+
+                output = "Invalid admin password"
+
+
 
             else:
+
                 dns1 = request.form.get("dns1")
+
                 dns2 = request.form.get("dns2")
 
 
+
                 if dns1:
+
                     output = set_dns(dns1, dns2)
+
                 else:
+
                     output = get_dns()
 
         elif cmd_key == "ip-dhcp":
 
-            setup_password = request.form.get("setup_password")
-
-            if setup_password != "supersecret":
-                output = "Invalid setup password"
-            else:
-                output = set_dhcp()
+            output = set_dhcp()
 
         elif cmd_key == "user-manager":
 
             setup_password = request.form.get("setup_password")
 
             if setup_password != "supersecret":
+
                 output = "Invalid setup password"
 
             else:
+
                 username = request.form.get("username")
+
                 new_password = request.form.get("user_password")
 
                 if not username or not new_password:
+
                     output = "Username and password required"
 
                 else:
+
                     output = change_user_password(
+
                         username,
+
                         new_password
+
                             )
+
         elif cmd_key == "daily-reboot":
 
-            setup_password = request.form.get("setup_password")
+            hour = request.form.get("reboot_hour")
 
-            if setup_password != "supersecret":
-                output = "Invalid setup password"
+            output = add_daily_reboot(hour)
+
+        elif cmd_key == "reboot":
+
+
+
+            admin_password = request.form.get("admin_password")
+
+
+
+            if admin_password != ADMIN_PASSWORD:
+
+                output = "Invalid admin password"
 
             else:
 
-                hour = request.form.get("reboot_hour")
+                output = reboot_machine()
 
-                output = add_daily_reboot(hour)
-        elif cmd_key == "reboot":
-
-            output = reboot_machine()
         elif cmd_key == "custom-connection-test":
 
             ip = request.form.get("custom_ip")
 
             port = request.form.get("custom_port")
 
-
-
             output = test_custom(ip, port)
-
-
 
         else:
 
@@ -1535,21 +1744,17 @@ def index():
 
     )
 
-
-
-
-
 @app.route("/login", methods=["GET", "POST"])
 
 def login():
 
     if request.method == "POST":
 
-        username = request.form.get("username")
+        user = request.form.get("username")
 
-        password = request.form.get("password")
+        pwd = request.form.get("password")
 
-        if username == username and password == password:
+        if user == USER and pwd == PASS:
 
             session["logged_in"] = True
 
@@ -1585,10 +1790,6 @@ def login():
 
     )
 
-
-
-
-
 # useless for now but might be useful later for graceful shutdown...
 
 def signal_handler(sig, frame):
@@ -1596,10 +1797,6 @@ def signal_handler(sig, frame):
     print("\nShutting down Flask application...")
 
     sys.exit(0)
-
-
-
-
 
 # port 5000 and 0.0.0.0 for LE and threaded for better performance - debug false for security reasons
 
@@ -1625,8 +1822,6 @@ if __name__ == "__main__":
 
         print("Install failed:", e)
 
-
-
     signal.signal(signal.SIGINT, signal_handler)
 
     signal.signal(signal.SIGTERM, signal_handler)
@@ -1634,3 +1829,5 @@ if __name__ == "__main__":
     sys.stdout.flush()
 
     app.run(debug=False, host="0.0.0.0", port=5000, threaded=True)
+
+
