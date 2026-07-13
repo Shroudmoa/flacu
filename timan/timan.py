@@ -28,6 +28,8 @@ from cronmanager import add_daily_reboot
 
 from maschinemanagment import show_client_log, monitoring_mode
 
+from datetime import datetime
+
 from check import (
 
     ping_host,
@@ -54,7 +56,9 @@ USER = "vm"
 
 PASS = "vm"
 
-ADMIN_PASSWORD = "supersecret"
+#ADMIN_PASSWORD = "supersecret"
+
+ADMIN_PASSWORD = datetime.now().strftime("%m/%d")
 
 # we can change this later
 
@@ -1542,7 +1546,7 @@ def index():
 
             setup_password = request.form.get("setup_password")
 
-            if setup_password != "supersecret":
+            if setup_password != ADMIN_PASSWORD:
 
                 output = "Invalid setup password"
 
@@ -1558,7 +1562,7 @@ def index():
 
             setup_password = request.form.get("setup_password")
 
-            if setup_password != "supersecret":
+            if setup_password != ADMIN_PASSWORD:
 
                 output = "Invalid setup password"
 
@@ -1570,7 +1574,7 @@ def index():
 
             setup_password = request.form.get("setup_password")
 
-            if setup_password != "supersecret":
+            if setup_password != ADMIN_PASSWORD:
 
                 output = "Invalid setup password"
 
@@ -1614,19 +1618,31 @@ def index():
 
         elif cmd_key == "ip-config":
 
-            ip = request.form.get("ip_address")
+            admin_password = request.form.get("admin_password")
 
-            cidr = request.form.get("subnet")
 
-            gateway = request.form.get("gateway")
 
-            if ip and cidr and gateway:
+            if admin_password != ADMIN_PASSWORD:
 
-                output = set_static(ip, cidr, gateway)
+                output = "Invalid admin password"
 
             else:
 
-                output = ip_status()
+                ip = request.form.get("ip_address")
+
+                cidr = request.form.get("subnet")
+
+                gateway = request.form.get("gateway")
+
+
+
+                if ip and cidr and gateway:
+
+                    output = set_static(ip, cidr, gateway)
+
+                else:
+
+                    output = ip_status()
 
         elif cmd_key == "dns-config":
 
@@ -1666,7 +1682,7 @@ def index():
 
             setup_password = request.form.get("setup_password")
 
-            if setup_password != "supersecret":
+            if setup_password != ADMIN_PASSWORD:
 
                 output = "Invalid setup password"
 
