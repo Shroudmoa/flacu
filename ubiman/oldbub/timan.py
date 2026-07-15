@@ -1,3 +1,40 @@
+import subprocess
+import os
+import sys
+from install import installTiManService, setup_mode
+import signal
+from shellCmd import run
+from maschinemanagment import show_client_log, monitoring_mode, get_routing_table
+from check import (
+    ping_host,
+    test_connection,
+    get_ipv4_addresses,
+    test_custom,
+)
+from serviceMan import service_status, start_service, stop_service
+from flask import Flask, render_template_string, request, redirect, url_for, session
+import shutil
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(SCRIPT_DIR, "static")
+os.makedirs(STATIC_DIR, exist_ok=True)
+background_src = os.getcwd() + "strict/background.jpg"
+background_src = os.getcwd() + "strict/background.jpg"
+background_dst = os.path.join(STATIC_DIR, "background.jpg")
+if os.path.exists(background_src):
+    shutil.copy(background_src, background_dst)
+logo_src = os.getcwd() + "strict/vm.jpg"
+logo_dst = os.path.join(STATIC_DIR, "vm.jpg")
+if os.path.exists(logo_src):
+    shutil.copy(logo_src, logo_dst)
+##########################################################################################
+app = Flask(__name__)
+app.secret_key = "lbBo85tuAguLZgMMAZisKp6q5Cohkjyy8ikYqtWb"
+username = "vm"
+password = "vm"
+# we can change this later
+##########################################################################################
+HTML_TEMPLATE = """
 <!doctype html>
 <html>
 <head>
@@ -181,10 +218,12 @@
             padding: 12px 20px;
             margin: 10px 5px;
         }
+
         .dropdown-wrapper {
             position: relative;
             width: 320px;
         }
+
         .dropdown-selected {
             background-color: rgba(255,255,255,0.1);
             color: white;
@@ -195,10 +234,12 @@
             transition: all 0.3s ease;
             user-select: none;
         }
+
         .dropdown-selected:hover {
             background-color: rgba(255,255,255,0.15);
             box-shadow: 0 0 10px rgba(255,0,150,0.3);
         }
+
         .dropdown-menu {
             display: none;
             position: absolute;
@@ -219,15 +260,18 @@
             gap: 10px;
             flex-wrap: wrap;
         }
+
         .dropdown-item {
             padding: 12px;
             color: white;
             cursor: pointer;
             transition: all 0.2s ease;
         }
+
         .dropdown-item:hover {
             background-color: rgba(255,0,150,0.2);
         }
+        
         h1 {
             margin-bottom: 30px;
             text-shadow: 0 0 20px rgba(255,0,150,0.3);
@@ -261,6 +305,8 @@
     </style>
 </head>
 <body>
+    <div class="background-container"></div>
+    <img src="{{ url_for('static', filename='vm.jpg') }}" class="watermark" alt="Watermark">
 {% if not session.get("logged_in") %}
     <h2>Login TiMan</h2>
     <form method="post" action="{{ url_for('login') }}">
@@ -274,203 +320,123 @@
 <h1 style="color: white;"><span class="status-dot"></span>TiMan Visionmaxx GmbH</h1>
 <div class="section-title">Service Management</div>
 <div class="button-group">
-    <form method="post" style="display:inline;">
-        <button name="command" value="stop_service">
-            Stop ti-gw-secunet
-        </button>
+    <form method="post" style="display: inline;">
+        <button name="command" value="stop_service">Stop ti-gw-secunet</button>
     </form>
-    <form method="post" style="display:inline;">
-        <button name="command" value="start_service">
-            Start ti-gw-secunet
-        </button>
+    <form method="post" style="display: inline;">
+        <button name="command" value="start_service">Start ti-gw-secunet</button>
     </form>
-    <form method="post" style="display:inline;">
-        <button 
-            name="command" 
-            value="reboot"
-            onclick="return askSensitivePassword();">
-            Reboot VM
-        </button>   
+    <form method="post" style="display: inline;">
+        <button name="command" value="get_service_status">Status ti-gw-secunet</button>
     </form>
 </div>
-<div class="button-group">
-    <form method="post" style="display:inline;">
-        <button name="command" value="installation-status">
-            Installation Status
-        </button>
-    </form>
-    <form method="post" style="display:inline;">
-        <button name="command" value="show-logs">
-            Client Log
-        </button>
-    </form>
-</div>
+
 <div class="section-title">
-    Management Center
+    Command Center
 </div>
+
 <div class="input-group">
+
     <div class="command-row">
+
         <div class="dropdown-wrapper">
+
             <div class="dropdown-selected"
                  onclick="toggleDropdown()">
+
                 Select Command ▼
+
             </div>
+
             <div class="dropdown-menu"
                  id="dropdownMenu">
+
                 <div class="dropdown-item"
-                     onclick="selectCommand('custom-connection-test','Custom Connection Test')">
+                     onclick="selectCommand('connection-test', 'Test Mailserver')">
+
+                    Test Mailserver
+
+                </div>
+                <div class="dropdown-item"
+                    onclick="selectCommand('custom-connection-test', 'Custom Connection Test')">
+
                     Custom Connection Test
+
                 </div>
                 <div class="dropdown-item"
-                     onclick="selectCommand('monitoring','Helper-Monitoring')">
+                     onclick="selectCommand('pwd', 'Current Directory')">
+
+                    Current Directory
+
+                </div>
+
+
+                <div class="dropdown-item"
+                     onclick="selectCommand('monitoring', 'Helper-Monitoring')">
                     Helper-Monitoring
+
                 </div>
+
                 <div class="dropdown-item"
-                     onclick="selectCommand('ip-config','IP Configuration')">
-                    IP Configuration
+                     onclick="selectCommand('show-logs', 'Client Log')">
+
+                    Client Log
+
                 </div>
+
                 <div class="dropdown-item"
-                     onclick="selectCommand('dns-config','DNS Configuration')">
-                    DNS Configuration
+                     onclick="selectCommand('route-print', 'Routing Table')">
+
+                    Routing Table
+
                 </div>
-                <div class="dropdown-item"
-                     onclick="selectCommand('daily-reboot','Daily Reboot')">
-                    Daily Reboot
-                </div>
+
             </div>
+
         </div>
-        <form method="post"
-            id="commandForm"
-            style="margin:0;">
-            <input type="hidden"
-                name="command"
-                id="commandInput">
-            <input type="hidden"
-                name="admin_password"
-                id="adminPasswordInput">
-            <button type="submit"
-                    onclick="return checkSensitiveCommand();">
-                AUSFÜHREN
-            </button>
-        </form>
-    </div>
-</div>
-<div id="managementFields" style="display:none; margin-top:15px;">
-<input type="text"
-id="custom_ip"
-name="custom_ip"
-form="commandForm"
-placeholder="IP Address">
-<input type="number"
-id="custom_port"
-name="custom_port"
-form="commandForm"
-placeholder="Port">
-<input type="number"
-id="rebootHourField"
-name="reboot_hour"
-form="commandForm"
-placeholder="Hour (0-23)"
-min="0"
-max="23">
-<input type="text"
-id="ipField"
-name="ip_address"
-form="commandForm"
-placeholder="IP Address">
-<input type="text"
-id="maskField"
-name="subnet"
-form="commandForm"
-placeholder="CIDR">
-<input type="text"
-id="gatewayField"
-name="gateway"
-form="commandForm"
-placeholder="Gateway">
-<form method="post" id="dhcpForm" style="display:inline;">
-    <input type="hidden" name="command" value="ip-dhcp">
-    <button id="dhcpButton"
-            type="submit"
-            style="display:none;">
-        Enable DHCP
-    </button>
-</form>
-<input type="text"
-id="dns1Field"
-name="dns1"
-form="commandForm"
-placeholder="Primary DNS">
-<input type="text"
-id="dns2Field"
-name="dns2"
-form="commandForm"
-placeholder="Secondary DNS">
-</div>
-<div class="section-title">Setup & Configuration</div>
-<div class="input-group">
-    <div class="command-row">
-        <div class="dropdown-wrapper">
-            <div class="dropdown-selected"
-                 id="setupSelected"
-                 onclick="toggleSetupDropdown()">
-                Select Setup Action ▼
-            </div>
-            <div class="dropdown-menu"
-                 id="setupDropdownMenu">
-                <div class="dropdown-item"
-                     onclick="selectSetupCommand('install', 'Install')">
-                    Install
-                </div>
-                <div class="dropdown-item"
-                     onclick="selectSetupCommand('uninstall', 'Uninstall')">
-                    Uninstall
-                </div>
-                <div class="dropdown-item"
-                     onclick="selectSetupCommand('dirty-uninstall', 'Dirty Uninstall')">
-                    Dirty Uninstall
-                </div>
-                <div class="dropdown-item"
-                    onclick="selectSetupCommand('user-manager', 'User Manager')">
-                    User Manager
-                </div>
-            </div>
-        </div>
-        <div id="setupFields"
-             style="display:none; margin-top:15px;">
+        <div id="customTestFields"
+            style="display:none; margin-top:15px;">
+
             <input type="text"
-                   id="kundennummerField"
-                   name="kundennummer"
-                   form="setupForm"
-                   placeholder="Kundennummer">
-            <input type="password"
-                   id="passwordField"
-                   name="setup_password"
-                   form="setupForm"
-                   placeholder="Password">
-            <input type="text"
-                id="userField"
-                name="username"
-                form="setupForm"
-                placeholder="Username">
-            <input type="password"
-                id="userPasswordField"
-                name="user_password"
-                form="setupForm"
-                placeholder="New Password">
+                name="custom_ip"
+                form="commandForm"
+                placeholder="IP Address">
+
+            <input type="number"
+                name="custom_port"
+                form="commandForm"
+                placeholder="Port">
+
         </div>
+
+
         <form method="post"
-              id="setupForm"
-              style="margin:0;">
+              id="commandForm"
+              style="margin: 0;">
+
             <input type="hidden"
                    name="command"
-                   id="setupCommandInput">
+                   id="commandInput">
+
             <button type="submit">
-                AUSFÜHREN
+                Execute Command
             </button>
+
         </form>
+
     </div>
+
 </div>
+
+
+<div class="section-title">Setup & Configuration</div>
+<div class="input-group">
+    <form method="post" action="{{ url_for('index') }}" style="display: block;">
+        <input type="text" name="kundennummer" placeholder="Enter Kundennummer" required>
+        <button type="submit" name="command" value="setup">Start Setup</button>
+    </form>
+</div>
+
 {% if output %}
 <div class="section-title">Output</div>
 <pre>{{ output }}</pre>
@@ -497,128 +463,191 @@ placeholder="Secondary DNS">
 </div>
 {% endif %}
 <script>
-function toggleSetupDropdown() {
-    const menu = document.getElementById("setupDropdownMenu");
-    menu.style.display =
-        menu.style.display === "block"
-        ? "none"
-        : "block";
-}
-function askSensitivePassword() {
-    let password = prompt("Enter admin password:");
-    if (password === null) {
-        return false; // user pressed cancel
-    }
-    let input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "admin_password";
-    input.value = password;
-    event.target.closest("form").appendChild(input);
-    return true;
-}
-function selectSetupCommand(value, label) {
-    document.getElementById("setupCommandInput").value = value;
-    document.getElementById("setupSelected").innerText = label;
-    document.getElementById("setupDropdownMenu").style.display = "none";
-    const fields = document.getElementById("setupFields");
-    const kdn = document.getElementById("kundennummerField");
-    const password = document.getElementById("passwordField");
-    const user = document.getElementById("userField");
-    const userPassword = document.getElementById("userPasswordField");
-    fields.style.display = "none";
-    kdn.style.display = "none";
-    password.style.display = "none";
-    user.style.display = "none";
-    userPassword.style.display = "none";
-    if (value === "install") {
-        fields.style.display = "block";
-        kdn.style.display = "inline-block";
-        password.style.display = "inline-block";
-    }
-    else if (
-        value === "uninstall" ||
-        value === "dirty-uninstall"
-    ) {
-        fields.style.display = "block";
-        password.style.display = "inline-block";
-    }
-    else if (value === "user-manager") {
-        fields.style.display = "block";
-        password.style.display = "inline-block";
-        user.style.display = "inline-block";
-        userPassword.style.display = "inline-block";
-    }
-}
-function checkSensitiveCommand() {
-    let command = document.getElementById("commandInput").value;
-    if (command === "dns-config" ||
-        command === "ip-config") {
-        let password = prompt("Enter admin password:");
-        if (password === null) {
-            return false;
-        }
-        document.getElementById("adminPasswordInput").value = password;
-    }
-    return true;
-}
+
 function toggleDropdown() {
     const menu = document.getElementById("dropdownMenu");
     menu.style.display = menu.style.display === "block" ? "none" : "block";
 }
+
 function selectCommand(value, label) {
+
     document.getElementById("commandInput").value = value;
+
     document.querySelector(".dropdown-selected").innerText = label;
+
     document.getElementById("dropdownMenu").style.display = "none";
-    const fields = document.getElementById("managementFields");
-    custom_ip.style.display = "none";
-    custom_port.style.display = "none";
-    const password = document.getElementById("passwordField");
-    const rebootHour = document.getElementById("rebootHourField");
-    const ip = document.getElementById("ipField");
-    const mask = document.getElementById("maskField");
-    const gateway = document.getElementById("gatewayField");
-    const dns1 = document.getElementById("dns1Field");
-    const dns2 = document.getElementById("dns2Field");
-    const dhcpButton = document.getElementById("dhcpButton");
-    dhcpButton.style.display = "none";
-    // Hide everything first
-    fields.style.display = "none";
-    fields.style.display = "none";
-    password.style.display = "none";
-    rebootHour.style.display = "none";
-    ip.style.display = "none";
-    mask.style.display = "none";
-    gateway.style.display = "none";
-    dns1.style.display = "none";
-    dns2.style.display = "none";
-if(value === "custom-connection-test") {
-fields.style.display="block";
-custom_ip.style.display="inline-block";
-custom_port.style.display="inline-block";
+
+    const customFields = document.getElementById("customTestFields");
+
+    if (value === "custom-connection-test") {
+        customFields.style.display = "block";
+    } else {
+        customFields.style.display = "none";
+    }
 }
-else if(value === "ip-config") {
-    fields.style.display = "block";
-    ipField.style.display = "inline-block";
-    maskField.style.display = "inline-block";
-    gatewayField.style.display = "inline-block";
-    dhcpButton.style.display = "inline-block";
-}
-else if(value === "dns-config") {
-fields.style.display="block";
-dns1Field.style.display="inline-block";
-dns2Field.style.display="inline-block";
-}
-else if(value === "daily-reboot") {
-fields.style.display="block";
-rebootHourField.style.display="inline-block";
-}
-}
+
+
 document.addEventListener("click", function(e) {
     if (!e.target.closest(".dropdown-wrapper")) {
         document.getElementById("dropdownMenu").style.display = "none";
     }
 });
+
 </script>
+
+    <script>
+        const bgContainer = document.querySelector('.background-container');
+        async function updateBackground() {
+            try {
+                const response = await fetch('/get-background');
+                const data = await response.json();
+                const newBg = `{{ url_for('static', filename='') }}${data.background}`;
+                // Fade out
+                bgContainer.classList.add('fade-out');
+                // Wait for fade out, then change image and fade in
+                setTimeout(() => {
+                    bgContainer.style.backgroundImage = `url('${newBg}')`;
+                    bgContainer.classList.remove('fade-out');
+                }, 1500); // Half of the transition time
+            } catch (error) {
+                console.error('Failed to update background:', error);
+            }
+        }
+        // Update background every ... 
+        setInterval(updateBackground, 20000); // 20 seconds 
+        // Set initial background
+        updateBackground();
+        // Add visual feedback on form submission
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function() {
+                const buttons = this.querySelectorAll('button[type="submit"]');
+                buttons.forEach(btn => {
+                    btn.style.opacity = '0.7';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
 """
+
+
+@app.route("/get-background")
+def get_background():
+    # return {"background": backgrounds[current_bg_index]}  # also kinda useless
+    return {"background": "background.jpg"}
+
+
+# didnt know that can be useful but it is..keep for Supporting phase so we can see if timan is running as a Service or not
+def get_currbindir():
+    try:
+        result = subprocess.run(["pwd"], capture_output=True, text=True, timeout=5)
+        return result.stdout if result.stdout else "Current directory not found"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+# login is like only 20 lines and the it-guy cant play around or talk SH about the timan security
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+    # v2 type :
+    output = ""
+    if request.method == "POST":
+        cmd_key = request.form.get("command")
+        kundennummer = request.form.get("kundennummer", None)
+        if cmd_key == "logout":
+            session.pop("logged_in", None)
+            return redirect(url_for("login"))
+        elif cmd_key == "setup":
+            if not kundennummer:
+                output = "Error: Kundennummer is required for setup"
+            else:
+                output = setup_mode(kundennummer)
+        elif cmd_key == "monitoring":
+            output = monitoring_mode(iterations=1)
+        elif cmd_key == "show-logs":
+            output = show_client_log()
+        elif cmd_key == "ipconfig":
+            output = (
+                get_ipv4_addresses()
+            )  #################flaw - wrong name chnage later pls. #ciel
+        elif cmd_key == "connection-test":
+            output = test_connection()
+        elif cmd_key == "pwd":
+            output = get_currbindir()
+        elif cmd_key == "stop_service":
+            output = stop_service()
+        elif cmd_key == "start_service":
+            output = start_service()
+        elif cmd_key == "get_service_status":
+            output = service_status()
+        elif cmd_key == "route-print":
+            output = get_routing_table()
+        elif cmd_key == "custom-connection-test":
+            ip = request.form.get("custom_ip")
+            port = request.form.get("custom_port")
+
+            output = test_custom(ip, port)
+
+        else:
+            output = "Invalid command"
+    machine_ips = get_ipv4_addresses()  # get_machine_ips()
+    ping_status_value = ping_host()
+    service_status_value = service_status()
+    return render_template_string(
+        HTML_TEMPLATE,
+        output=output,
+        machine_ips=machine_ips,
+        ping_status=ping_status_value,
+        service_status_value=service_status_value,
+    )
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username == username and password == password:
+            session["logged_in"] = True
+            return redirect(url_for("index"))
+        else:
+            return render_template_string(
+                HTML_TEMPLATE,
+                output="Invalid credentials. Please try again.",
+                machine_ips="",
+                ping_status="",
+                service_status_value="",
+            )
+    return render_template_string(
+        HTML_TEMPLATE,
+        output="",
+        machine_ips="",
+        ping_status="",
+        service_status_value="",
+    )
+
+
+# useless for now but might be useful later for graceful shutdown...
+def signal_handler(sig, frame):
+    print("\nShutting down Flask application...")
+    sys.exit(0)
+
+
+# port 5000 and 0.0.0.0 for LE and threaded for better performance - debug false for security reasons
+if __name__ == "__main__":
+    # v37
+    try:
+        if installTiManService():
+            run("apt update")
+            run("apt install -y curl iproute2 nano vim")
+            sys.exit(0)
+    except Exception as e:
+        print("Install failed:", e)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    sys.stdout.flush()
+    app.run(debug=False, host="0.0.0.0", port=5000, threaded=True)

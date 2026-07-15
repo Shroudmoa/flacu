@@ -2,6 +2,8 @@ import os
 import subprocess
 from check import test_connection, check_ports_socket_parallel, getips
 import time
+
+
 # main moni
 def monitoring_mode(iterations=1):
     output_lines = []
@@ -12,6 +14,8 @@ def monitoring_mode(iterations=1):
             output_lines.append("\n" + "=" * 50 + "\n")
             time.sleep(10)
     return "\n".join(output_lines)
+
+
 # kinda messy - might use get ip insteed
 def get_machine_ips():
     try:
@@ -21,6 +25,8 @@ def get_machine_ips():
         return result.stdout if result.stdout else "No IP information available"
     except Exception as e:
         return f"Error retrieving IPs: {str(e)}"
+
+
 def get_routing_table() -> str:
     try:
         result = subprocess.run(
@@ -29,7 +35,8 @@ def get_routing_table() -> str:
         return result.stdout if result.stdout else "No routing information available"
     except Exception as e:
         return f"Error: {str(e)}"
-# main monitoring function, also used in monitoring mode, might split up later
+
+
 # main monitoring function, also used in monitoring mode, might split up later
 def monitor_single_iteration() -> str:
     output_lines = []
@@ -37,8 +44,6 @@ def monitor_single_iteration() -> str:
     output_lines.append("IPv4 Adressen:")
     for ip in ips:
         output_lines.append(f" - {ip}")
-    output_lines.append("\nRouting Table:")
-    output_lines.append(get_routing_table())
     output_lines.append("\nPort Checks:")
     for ip in ips:
         output_lines.append(f"\nChecking {ip}")
@@ -48,6 +53,8 @@ def monitor_single_iteration() -> str:
     conn_test = test_connection()
     output_lines.append(conn_test)
     return "\n".join(output_lines)
+
+
 # just client log is enough for now
 def show_client_log() -> str:
     log_file = "/home/vm/tigw/data/logs/client.log"
@@ -58,6 +65,8 @@ def show_client_log() -> str:
             return f.read()
     except Exception as e:
         return f"Fehler beim Lesen der Datei: {str(e)}"
+
+
 # new test for changing password
 def change_vm_password(kundennummer) -> str:
     new_password = f"!tigw{kundennummer}"

@@ -3,6 +3,8 @@ import subprocess
 import requests
 from shellCmd import run_cmd
 import concurrent.futures
+
+
 # custom
 def test_custom(ip, port) -> str:
     try:
@@ -11,6 +13,8 @@ def test_custom(ip, port) -> str:
         return f"OK     Verbindung zu {ip}:{port}"
     except Exception as e:
         return f"ERROR  Verbindung zu {ip}:{port} -> {e}"
+
+
 # keep
 def getips() -> list[str]:
     ips = []
@@ -23,6 +27,8 @@ def getips() -> list[str]:
             ip = line.split()[1].split("/")[0]
             ips.append(ip)
     return ips
+
+
 # keep, also used in monitoring mode
 def get_ipv4_addresses() -> str:
     output_lines = []
@@ -41,14 +47,18 @@ def get_ipv4_addresses() -> str:
     if not found:
         output_lines.append("Keine IPv4 Adresse gefunden")
     return "\n".join(output_lines)
+
+
 # keep, also used in monitoring mode
 def test_connection() -> str:
     results = []
+
     tigw_sockets = [
         ("100.102.8.6", 465),
         ("100.102.8.13", 8443),
         ("100.102.30.4", 443),
     ]
+
     for ip, port in tigw_sockets:
         try:
             sock = socket.create_connection((ip, port), timeout=5)
@@ -56,12 +66,17 @@ def test_connection() -> str:
             results.append(f"OK     Verbindung zu {ip}:{port}")
         except Exception as e:
             results.append(f"ERROR  Verbindung zu {ip}:{port} -> {e}")
+
     return "\n".join(results)
+
+
 def check_reachability() -> bool:
     tigw_url = "https://wl-ti-gateway-nutzerportal-pu.wlcle.org"
     tigwResponse = requests.get(tigw_url)
     # code, _, _ = run_cmd(f"curl -Is {tigw_url} --max-time 5")
     return tigwResponse.status_code == 200
+
+
 # check later might delete
 def check_single_port(host, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,6 +86,8 @@ def check_single_port(host, port):
         return port, (result == 0)
     finally:
         s.close()
+
+
 # needed
 def check_ports_socket_parallel(host="127.0.0.1", show_only_problems=False):
     output_lines: str = f"Port Status ({host}):\n"
@@ -84,6 +101,8 @@ def check_ports_socket_parallel(host="127.0.0.1", show_only_problems=False):
         else:
             output_lines += f"ERROR  Port {port} nicht erreichbar\n"
     return output_lines
+
+
 # keep - might use it for s2s Moni
 def ping_host(host="8.8.8.8"):
     try:
