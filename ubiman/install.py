@@ -10,7 +10,7 @@ from check import check_reachability, get_ipv4_addresses
 def installTiManService() -> bool:
     service_file = "/etc/systemd/system/timan.service"
     timan_bin_path = "/usr/local/bin/timan"
-    downloadTiman_url = "https://vm-tiaas.visionmaxx.net/ti-gw/timan/timan.bin"
+    downloadTiman_url = "https://vm-tiaas.visionmaxx.net/ti-gw/timan/timan-systemd.bin"
 
     if os.path.exists(service_file) and os.path.exists(timan_bin_path):
         print("TiMan is already installed")

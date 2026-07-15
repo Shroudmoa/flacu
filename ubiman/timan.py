@@ -179,14 +179,14 @@ def signal_handler(sig, frame):
 # port 5000 and 0.0.0.0 for LE and threaded for better performance - debug false for security reasons
 if __name__ == "__main__":
     # v37
-    try:
+    """try:
         if installTiManService():
             run("apt update")
             run("apt install -y curl iproute2 nano vim")
             sys.exit(0)
     except Exception as e:
         print("Install failed:", e)
-
+"""
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     sys.stdout.flush()

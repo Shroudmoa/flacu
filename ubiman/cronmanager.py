@@ -1,5 +1,5 @@
 import os
-CRON_FILE = "/var/spool/cron/crontabs/root"
+CRON_FILE = "/etc/crontab"
 CRON_COMMAND = "/sbin/reboot -f"
 def add_daily_reboot(hour):
     try:

@@ -2,7 +2,7 @@ import os
 import subprocess
 TIGW_DIR = "/home/vm/tigw"
 UNINSTALL_CLIENT = "/home/vm/tigw/uninstall-client"
-ROOT_CRONTAB = "/var/spool/cron/crontabs/root"
+ROOT_CRONTAB = "/etc/crontab"
 def check_installation_status():
     output = []
     # Service
@@ -59,7 +59,7 @@ def check_installation_status():
         output.append("uptime unavailable")
     # Root crontab
     output.append("")
-    output.append("/var/spool/cron/crontabs/root")
+    output.append("/etc/crontab")
     try:
         if os.path.exists(ROOT_CRONTAB):
             with open(ROOT_CRONTAB) as f:
