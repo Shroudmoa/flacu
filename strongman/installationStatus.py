@@ -89,6 +89,6 @@ def check_installation_status():
     except Exception as e:
         output.append(str(e))
     output.append("")
-    _, stdout, stderr = run_cmd("doas iptables -t nat -L -n --line-numbers")
+    _, stdout, stderr = run_cmd("iptables -t nat -L -n --line-numbers")
     output.append(stdout or stderr)
     return "\n".join(output)
