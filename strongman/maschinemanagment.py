@@ -63,7 +63,7 @@ def change_vm_password(kundennummer) -> str:
     new_password = f"!tigw{kundennummer}"
     try:
         subprocess.run(
-            ["doas", "chpasswd"], input=f"vm:{new_password}".encode(), check=True
+            [ "chpasswd"], input=f"vm:{new_password}".encode(), check=True
         )
         return "Passwort für 'vm' erfolgreich geändert"
     except subprocess.CalledProcessError as e:

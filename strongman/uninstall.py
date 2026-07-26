@@ -4,13 +4,13 @@ CONFIG_FILE = "/etc/swanctl/conf.d/ti-gw.conf"
 def uninstall():
     try:
         subprocess.run(
-            ["doas", "rm", "-f", CONFIG_FILE],
+            [ "rm", "-f", CONFIG_FILE],
             capture_output=True,
             text=True,
             check=True,
         )
         subprocess.run(
-            ["doas", "iptables", "-t", "nat", "-F"],
+            [ "iptables", "-t", "nat", "-F"],
             capture_output=True,
             text=True,
             check=True,

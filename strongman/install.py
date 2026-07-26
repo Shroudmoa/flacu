@@ -148,9 +148,9 @@ fi
     # Write config
     with open("ti-gw.conf.tmp", "w") as f:
         f.write(swanctl_conf)
-    subprocess.run(["doas", "cp", "ti-gw.conf.tmp", config_path], check=False)
-    subprocess.run(["doas", "chown", "root:root", config_path], check=False)
-    subprocess.run(["doas", "chmod", "644", config_path], check=False)
+    subprocess.run([ "cp", "ti-gw.conf.tmp", config_path], check=False)
+    subprocess.run([ "chown", "root:root", config_path], check=False)
+    subprocess.run([ "chmod", "644", config_path], check=False)
     os.remove("ti-gw.conf.tmp")
     output_lines.append(f"{config_path}")
     # Write health check
@@ -159,7 +159,7 @@ fi
     subprocess.run(["chmod", "+x", health_check_path], check=False)
     output_lines.append(f"{health_check_path}")
     # Sysctl
-    result = subprocess.run(["doas", "cat", "/etc/sysctl.conf"], capture_output=True, text=True)
+    result = subprocess.run([ "cat", "/etc/sysctl.conf"], capture_output=True, text=True)
     content = result.stdout if result.returncode == 0 else ""
     if "net.ipv4.ip_forward" in content:
         new_content = ""
@@ -172,31 +172,31 @@ fi
         new_content = content + "net.ipv4.ip_forward = 1\n"
     with open("sysctl.conf.tmp", "w") as f:
         f.write(new_content)
-    subprocess.run(["doas", "cp", "sysctl.conf.tmp", "/etc/sysctl.conf"], check=False)
+    subprocess.run([ "cp", "sysctl.conf.tmp", "/etc/sysctl.conf"], check=False)
     os.remove("sysctl.conf.tmp")
-    subprocess.run(["doas", "sysctl", "-w", "net.ipv4.ip_forward=1"], check=False)
+    subprocess.run([ "sysctl", "-w", "net.ipv4.ip_forward=1"], check=False)
     result = subprocess.run(["cat", "/proc/sys/net/ipv4/ip_forward"], capture_output=True, text=True)
     ip_forward_value = result.stdout.strip()
     output_lines.append(f"net.ipv4.ip_forward = {ip_forward_value}")
         # iptables
-    subprocess.run(["doas", "iptables", "-t", "nat", "-A", "POSTROUTING", "-s", local_net, "-d", params['openFdNet'], "-j", "SNAT", "--to-source", tunnel_ip], check=False)
+    subprocess.run([ "iptables", "-t", "nat", "-A", "POSTROUTING", "-s", local_net, "-d", params['openFdNet'], "-j", "SNAT", "--to-source", tunnel_ip], check=False)
     rules = subprocess.check_output(["iptables-save"], text=True)
-    subprocess.run(["doas", "mkdir", "-p", "/etc/iptables"], check=False)
-    subprocess.run(["doas", "tee", "/etc/iptables/rules-save"], input=rules, text=True, stdout=subprocess.DEVNULL)
+    subprocess.run([ "mkdir", "-p", "/etc/iptables"], check=False)
+    subprocess.run([ "tee", "/etc/iptables/rules-save"], input=rules, text=True, stdout=subprocess.DEVNULL)
     fix_iptables_order()
-    subprocess.run(["doas", "rc-update", "add", "iptables", "default"], check=False)
+    subprocess.run([ "rc-update", "add", "iptables", "default"], check=False)
     # Cron
-    result = subprocess.run(["doas", "crontab", "-l"], capture_output=True, text=True)
+    result = subprocess.run([ "crontab", "-l"], capture_output=True, text=True)
     existing_cron = result.stdout if result.returncode == 0 else ""
     if health_check_path not in existing_cron:
         new_cron = existing_cron + f"* * * * * {health_check_path}\n" if existing_cron else f"* * * * * {health_check_path}\n"
         with open("crontab.tmp", "w") as f:
             f.write(new_cron)
-        subprocess.run(["doas", "crontab", "crontab.tmp"], check=False)
+        subprocess.run([ "crontab", "crontab.tmp"], check=False)
         os.remove("crontab.tmp")
         output_lines.append("Health check cron added")
     # Load config
-    subprocess.run(["doas", "swanctl", "--load-all"], check=False)
+    subprocess.run([ "swanctl", "--load-all"], check=False)
     output_lines.append("swanctl config loaded")
     output_lines.append("\n" + "$"*70)
     output_lines.append("VPN Setup Complete")

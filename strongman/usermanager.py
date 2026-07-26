@@ -9,7 +9,7 @@ def user_exists(username):
 def create_user(username):
     try:
         subprocess.run(
-            ["doas", "adduser", "-D", username],
+            [ "adduser", "-D", username],
             check=True
         )
         return True
@@ -18,7 +18,7 @@ def create_user(username):
 def add_to_wheel(username):
     try:
         subprocess.run(
-            ["doas", "adduser", username, "wheel"],
+            [ "adduser", username, "wheel"],
             check=True
         )
         return True
@@ -27,7 +27,7 @@ def add_to_wheel(username):
 def set_password(username, password):
     try:
         subprocess.run(
-            ["doas", "chpasswd"],
+            [ "chpasswd"],
             input=f"{username}:{password}",
             text=True,
             check=True
