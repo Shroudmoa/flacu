@@ -128,7 +128,7 @@ def setup_vpn(vpn_json: str, local_net: str, target_ip: str, child: str) -> str:
 
         return "FEHLER: Invalid JSON"
 
-    output_lines.append("[*] Konfiguriere VPN...")
+    output_lines.append(" Konfiguriere VPN...")
 
     params = {item['name']: item['value'] for item in data['parameters']}
 
@@ -422,11 +422,9 @@ fi
 
     output_lines.append("swanctl config loaded")
 
-    output_lines.append("\n" + "="*70)
+    output_lines.append("\n" + "$"*70)
 
     output_lines.append("VPN Setup Complete")
-
-    output_lines.append("="*70)
 
     return "\n".join(output_lines)
 
@@ -438,7 +436,7 @@ def setup_mode(vpn_json: str, local_net: str, target_ip: str, child_name: str) -
 
         return "FEHLER: All parameters required (JSON, LE, IP, Child)"
 
-    output_lines.append("[*] Starting VPN setup...")
+    output_lines.append(" Starting VPN setup...")
 
     output_lines.append(setup_vpn(vpn_json, local_net, target_ip, child_name))
 

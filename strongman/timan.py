@@ -384,6 +384,8 @@ def signal_handler(sig, frame):
 
     sys.exit(0)
 
+
+
 ##################################################################################################
 
 def alpine_setup():
@@ -470,6 +472,8 @@ def alpine_setup():
 
 
 
+
+
 if __name__ == "__main__":
 
     try:
@@ -477,6 +481,10 @@ if __name__ == "__main__":
         if installTiManService():
 
             alpine_setup()
+
+            run("rc-service strongman start")
+
+            run("rc-update add strongman default")
 
             sys.exit(0)
 

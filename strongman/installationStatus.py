@@ -2,11 +2,11 @@ import os
 
 import subprocess
 
-
+from shellCmd import run_cmd
 
 TIGW_DIR = "/etc/swanctl/conf.d/ti-gw.conf"
 
-UNINSTALL_CLIENT = "/home/vm/tigw/uninstall-client"
+UNINSTALL_CLIENT = "/etc/swanctl/conf.d/ti-gw.conf" # change later
 
 ROOT_CRONTAB = "/var/spool/cron/crontabs/root"
 
@@ -273,6 +273,16 @@ def check_installation_status():
     except Exception as e:
 
         output.append(str(e))
+
+
+
+    output.append("")
+
+    _, stdout, stderr = run_cmd("doas iptables -t nat -L -n --line-numbers")
+
+    output.append(stdout or stderr)
+
+
 
 
 
