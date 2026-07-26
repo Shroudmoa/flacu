@@ -6,7 +6,7 @@ import subprocess
 
 
 
-UNINSTALL_SCRIPT = "/home/vm/tigw/uninstall-client"
+CONFIG_FILE = "/etc/swanctl/conf.d/ti-gw.conf"
 
 
 
@@ -14,81 +14,22 @@ UNINSTALL_SCRIPT = "/home/vm/tigw/uninstall-client"
 
 def uninstall():
 
-
-
-    output = []
-
-
-
-    if not os.path.exists(UNINSTALL_SCRIPT):
-
-        return "uninstall_client not found"
-
-
-
-
-
     try:
-
-        subprocess.run(
-
-            ["chmod", "+x", UNINSTALL_SCRIPT],
-
-            check=True
-
-        )
-
-
-
-        output.append(
-
-            "chmod +x /home/vm/tigw/uninstall-client completed"
-
-
-        )
-
-
-
-
 
         result = subprocess.run(
 
-            [UNINSTALL_SCRIPT],
+            ["doas", "rm", "-f", CONFIG_FILE],
 
             capture_output=True,
 
-            text=True
+            text=True,
+
+            check=True,
 
         )
 
+        return f"Deleted {CONFIG_FILE}"
 
+    except subprocess.CalledProcessError as e:
 
-
-
-        output.append("Uninstall script executed")
-
-
-
-        if result.stdout:
-
-            output.append(result.stdout)
-
-
-
-        if result.stderr:
-
-            output.append(result.stderr)
-
-
-
-
-
-    except Exception as e:
-
-        output.append(f"Uninstall failed: {str(e)}")
-
-
-
-
-
-    return "\n".join(output)
+        return f"Failed to delete {CONFIG_FILE}: {e.stderr or e}"

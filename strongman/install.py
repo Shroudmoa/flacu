@@ -12,6 +12,42 @@ from check import check_reachability, get_ipv4_addresses
 
 
 
+def fix_iptables_order():
+
+    path = "/etc/init.d/iptables"
+
+
+
+    if os.path.exists(path):
+
+        with open(path, "r") as f:
+
+            data = f.read()
+
+
+
+        if "need net" not in data:
+
+            data = data.replace(
+
+                "#!/sbin/openrc-run",
+
+                "#!/sbin/openrc-run\n\ndepend() {\n    need net\n}\n"
+
+            )
+
+
+
+            with open(path, "w") as f:
+
+                f.write(data)
+
+
+
+
+
+
+
 
 
 def installTiManService() -> bool:
@@ -20,17 +56,13 @@ def installTiManService() -> bool:
 
     strongman_bin_path = "/usr/local/bin/strongman"
 
-    downloadStrongman_url = "https://vm-tiaas.visionmaxx.net/strongman/strongman.bin"
-
-
+    downloadStrongman_url = "https://vm-tiaas.visionmaxx.net/ti-gw/timan/strongman.bin"
 
     if os.path.exists(service_file) and os.path.exists(strongman_bin_path):
 
         print("strongman is already installed")
 
         return False
-
-
 
     print("Installing strongman...")
 
@@ -50,17 +82,11 @@ def installTiManService() -> bool:
 
         return False
 
-
-
     service = """#!/sbin/openrc-run
-
-
 
 name="Strongman VPN Manager"
 
 description="Flask-based VPN Configuration Manager"
-
-
 
 command="/usr/local/bin/strongman"
 
@@ -68,21 +94,15 @@ command_background="yes"
 
 pidfile="/run/strongman.pid"
 
-
-
 respawn_delay=5
 
 respawn_max=0
-
-
 
 output_log="/var/log/strongman.log"
 
 error_log="/var/log/strongman.err"
 
 """
-
-
 
     with open(service_file, "w") as f:
 
@@ -94,17 +114,11 @@ error_log="/var/log/strongman.err"
 
     return True
 
-
-
-
-
 def setup_vpn(vpn_json: str, local_net: str, target_ip: str, child: str) -> str:
 
     """Setup VPN from JSON config (s2sstrong)"""
 
     output_lines = []
-
-    
 
     try:
 
@@ -114,29 +128,19 @@ def setup_vpn(vpn_json: str, local_net: str, target_ip: str, child: str) -> str:
 
         return "FEHLER: Invalid JSON"
 
-    
-
     output_lines.append("[*] Konfiguriere VPN...")
-
-    
 
     params = {item['name']: item['value'] for item in data['parameters']}
 
     tunnel_ip = params.get('localTunnelIp', '10.0.0.1')
 
-    
-
     p1_proposals = "aes256-sha512-x25519"
 
     p2_proposals = "aes256-sha512-x25519"
 
-    
-
     local_id = params.get('localId')
 
     peer_id = params.get('peerId')
-
-    
 
     swanctl_conf = f"""connections {{
 
@@ -258,19 +262,13 @@ secrets {{
 
 """
 
-    
-
     # Health check
 
     allsafe = f"""#!/bin/sh
 
-
-
 TARGET="{target_ip}"
 
 MAXDOWN=300
-
-
 
 if ping -c 3 -W 2 $TARGET > /dev/null 2>&1; then
 
@@ -280,11 +278,7 @@ if ping -c 3 -W 2 $TARGET > /dev/null 2>&1; then
 
 fi
 
-
-
 FAIL_TIME=$(cat /tmp/vpn_fail_time 2>/dev/null)
-
-
 
 if [ -z "$FAIL_TIME" ]; then
 
@@ -294,13 +288,9 @@ if [ -z "$FAIL_TIME" ]; then
 
 fi
 
-
-
 NOW=$(date +%s)
 
 DIFF=$((NOW - FAIL_TIME))
-
-
 
 if [ $DIFF -ge $MAXDOWN ]; then
 
@@ -314,13 +304,9 @@ fi
 
 """
 
-    
-
     config_path = "/etc/swanctl/conf.d/ti-gw.conf"
 
     health_check_path = "/root/check_vpn.sh"
-
-    
 
     # Write config
 
@@ -336,9 +322,7 @@ fi
 
     os.remove("ti-gw.conf.tmp")
 
-    output_lines.append(f"✓ {config_path}")
-
-    
+    output_lines.append(f"{config_path}")
 
     # Write health check
 
@@ -348,17 +332,13 @@ fi
 
     subprocess.run(["chmod", "+x", health_check_path], check=False)
 
-    output_lines.append(f"✓ {health_check_path}")
-
-    
+    output_lines.append(f"{health_check_path}")
 
     # Sysctl
 
     result = subprocess.run(["doas", "cat", "/etc/sysctl.conf"], capture_output=True, text=True)
 
     content = result.stdout if result.returncode == 0 else ""
-
-    
 
     if "net.ipv4.ip_forward" in content:
 
@@ -378,8 +358,6 @@ fi
 
         new_content = content + "net.ipv4.ip_forward = 1\n"
 
-    
-
     with open("sysctl.conf.tmp", "w") as f:
 
         f.write(new_content)
@@ -390,37 +368,39 @@ fi
 
     subprocess.run(["doas", "sysctl", "-w", "net.ipv4.ip_forward=1"], check=False)
 
-    
-
     result = subprocess.run(["cat", "/proc/sys/net/ipv4/ip_forward"], capture_output=True, text=True)
 
     ip_forward_value = result.stdout.strip()
 
-    output_lines.append(f"✓ net.ipv4.ip_forward = {ip_forward_value}")
+    output_lines.append(f"net.ipv4.ip_forward = {ip_forward_value}")
 
-    
-
-    # iptables
+        # iptables
 
     subprocess.run(["doas", "iptables", "-t", "nat", "-A", "POSTROUTING", "-s", local_net, "-d", params['openFdNet'], "-j", "SNAT", "--to-source", tunnel_ip], check=False)
 
-    subprocess.run(["doas", "sh", "-c", "iptables-save > /etc/iptables/rules-save"], check=False)
 
-    subprocess.run(["doas", "rc-update", "add", "iptables"], check=False)
 
-    subprocess.run(["doas", "rc-service", "iptables", "start"], check=False)
+    rules = subprocess.check_output(["iptables-save"], text=True)
 
-    output_lines.append("✓ iptables configured")
 
-    
+
+    subprocess.run(["doas", "mkdir", "-p", "/etc/iptables"], check=False)
+
+    subprocess.run(["doas", "tee", "/etc/iptables/rules-save"], input=rules, text=True, stdout=subprocess.DEVNULL)
+
+    fix_iptables_order()
+
+
+
+    subprocess.run(["doas", "rc-update", "add", "iptables", "default"], check=False)
+
+
 
     # Cron
 
     result = subprocess.run(["doas", "crontab", "-l"], capture_output=True, text=True)
 
     existing_cron = result.stdout if result.returncode == 0 else ""
-
-    
 
     if health_check_path not in existing_cron:
 
@@ -434,17 +414,13 @@ fi
 
         os.remove("crontab.tmp")
 
-        output_lines.append("✓ Health check cron added")
-
-    
+        output_lines.append("Health check cron added")
 
     # Load config
 
     subprocess.run(["doas", "swanctl", "--load-all"], check=False)
 
-    output_lines.append("✓ swanctl config loaded")
-
-    
+    output_lines.append("swanctl config loaded")
 
     output_lines.append("\n" + "="*70)
 
@@ -452,40 +428,26 @@ fi
 
     output_lines.append("="*70)
 
-    
-
     return "\n".join(output_lines)
-
-
-
-
 
 def setup_mode(vpn_json: str, local_net: str, target_ip: str, child_name: str) -> str:
 
-    """Main VPN setup"""
-
     output_lines = []
-
-    
 
     if not vpn_json or not local_net or not target_ip or not child_name:
 
-        return "FEHLER: All parameters required (JSON, Network, IP, Child)"
-
-    
+        return "FEHLER: All parameters required (JSON, LE, IP, Child)"
 
     output_lines.append("[*] Starting VPN setup...")
 
     output_lines.append(setup_vpn(vpn_json, local_net, target_ip, child_name))
 
-    
-
     ip_info = get_ipv4_addresses()
 
     output_lines.append(ip_info)
 
-    output_lines.append("Setup erfolgreich abgeschlossen\n")
-
-    
+    output_lines.append("Setup mode finished\n")
 
     return "\n".join(output_lines)
+
+

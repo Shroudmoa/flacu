@@ -48,6 +48,8 @@ from check import (
 
 from serviceMan import service_status, start_service, stop_service
 
+###############################################
+
 app = Flask(__name__)
 
 app.secret_key = "lbBo85tuAguLZgMMAZisKp6q5Cohkjyy8ikYqtWb"
@@ -58,9 +60,25 @@ PASS = "vm"
 
 ADMIN_PASSWORD = datetime.now().strftime("%m/%d")
 
-# Load HTML template from external file
+########################################
 
-with open("index.html", "r") as f:
+# Load HTML template (new one)
+
+if getattr(sys, "frozen", False):
+
+    base_path = os.path.dirname(sys.executable)
+
+else:
+
+    base_path = os.path.dirname(os.path.abspath(__file__))
+
+
+
+index_path = os.path.join(base_path, "index.html")
+
+
+
+with open(index_path, "r", encoding="utf-8") as f:
 
     HTML_TEMPLATE = f.read()
 
@@ -366,25 +384,107 @@ def signal_handler(sig, frame):
 
     sys.exit(0)
 
+##################################################################################################
+
+def alpine_setup():
+
+    if os.geteuid() != 0:
+
+        return "Please run as root."
+
+
+
+    def run(cmd):
+
+        subprocess.run(cmd, shell=True, check=True)
+
+
+
+    # Install doas
+
+    run("apk update")
+
+    run("apk add doas")
+
+
+
+    # Configure repositories
+
+    with open("/etc/apk/repositories", "w") as f:
+
+        f.write(
+
+            "http://dl-cdn.alpinelinux.org/alpine/edge/main\n"
+
+            "http://dl-cdn.alpinelinux.org/alpine/edge/community\n"
+
+        )
+
+
+
+    run("apk update")
+
+
+
+    # Install packages
+
+    run("apk add vim nano iptables strongswan")
+
+
+
+    run("apk update")
+
+    run("apk add curl iproute2")
+
+    run("apk add git fish strongswan iptables")
+
+    run("rc-update add charon default")
+
+
+
+    # Configure doas
+
+    with open("/etc/doas.conf", "w") as f:
+
+        f.write("permit persist :wheel\n")
+
+
+
+    # Create users
+
+    for user in ("vm", "ti-gw"):
+
+        subprocess.run(f"id -u {user}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        if subprocess.run(f"id -u {user}", shell=True).returncode != 0:
+
+            run(f"adduser -D {user}")
+
+
+
+        run(f"adduser {user} wheel")
+
+
+
+    return "Alpine init completed successfully."
+
+
+
 if __name__ == "__main__":
 
     try:
 
         if installTiManService():
 
-            run("apk update")
-
-            run("apk add curl iproute2 nano vim")
-
-            run("rc-update add timan default")
-
-            run("rc-service timan start")
+            alpine_setup()
 
             sys.exit(0)
 
     except Exception as e:
 
         print("Install failed:", e)
+
+    alpine_setup()
 
     signal.signal(signal.SIGINT, signal_handler)
 
