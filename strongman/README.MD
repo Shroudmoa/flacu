@@ -1,6 +1,6 @@
-# TiMan
+# Strongman
 
-TiMan ist ein Web-Interface für unsere TI-GW-SECUNET-Kunden.
+Strongman ist ein Web-Interface für unsere TI-GW-Arvato-Kunden.
 
 Kurz gesagt hilft TiMan dabei, Installationen schneller durchzuführen und Probleme einfacher zu analysieren bzw. zu dokumentieren.
 
@@ -36,23 +36,23 @@ Passwort: vm
 ## Voraussetzungen installieren
 
 ```bash
-sudo apk add curl
+doas apk add curl
 ```
 
 ## Binary herunterladen
 
 ```bash
-curl -L https://vm-tiaas.visionmaxx.net/ti-gw/timan/timan.bin -o timan.bin
+curl -L https://vm-tiaas.visionmaxx.net/ti-gw/timan/strongman.bin -o strongman.bin
 ```
 
 ## Ausführbar machen
 
 ```bash
-sudo chmod +x timan.bin
+sudo chmod +x strongman.bin
 ```
 
-## TiMan starten
+## Strongman starten
 
 ```bash
-sudo ./timan.bin
+sudo ./strongman.bin
 ```
