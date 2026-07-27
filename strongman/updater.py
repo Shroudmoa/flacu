@@ -86,6 +86,12 @@ def check_update():
             f"Expected : {expected_hash}\n"
             f"Received : {calculated}"
         )
+    print("Stopping service...")
+
+    subprocess.run(
+        ["rc-service", "strongman", "stop"],
+        check=False
+    )
 
     print("Installing update...")
 
@@ -106,7 +112,7 @@ def check_update():
     print("Restarting service...")
 
     subprocess.run(
-        ["rc-service", "strongman", "restart"],
+        ["rc-service", "strongman", "start"],
         check=False
     )
 
