@@ -3,34 +3,32 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 
 import requests
 
-
-CURRENT_VERSION = "4.0"
 
 UPDATE_URL = "https://vm-tiaas.visionmaxx.net/ti-gw/timan/strong_update.json"
 
 BINARY_PATH = "/usr/local/bin/strongman"
 BACKUP_PATH = "/usr/local/bin/strongman.backup"
 
-REQUEST_TIMEOUT = 30 #useless like joe biden
+UPDATE_SCRIPT = "/tmp/strongman_update.sh"
 
+REQUEST_TIMEOUT = 30
 
 
 def sha256sum(filename):
-    h = hashlib.sha256()
+    sha = hashlib.sha256()
 
     with open(filename, "rb") as f:
         while True:
-            chunk = f.read(65536)
-            if not chunk:
+            data = f.read(65536)
+            if not data:
                 break
-            h.update(chunk)
+            sha.update(data)
 
-    return h.hexdigest()
-
-
+    return sha.hexdigest()
 
 
 def check_update():
@@ -38,82 +36,134 @@ def check_update():
     print("Checking for updates...")
 
     try:
-        response = requests.get(UPDATE_URL, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
+        r = requests.get(
+            UPDATE_URL,
+            timeout=REQUEST_TIMEOUT
+        )
+        r.raise_for_status()
+        update = r.json()
 
     except Exception as e:
-        return f"Could not read update information:\n{e}"
+        return f"Update check failed: {e}"
 
-    if not data.get("update", False):
-        return "No update available."
 
-    remote_version = data.get("version", "")
-    download_url = data.get("download", "")
-    expected_hash = data.get("checksum", "").lower()
+    if not update.get("update", False):
+        return "No update available"
 
-    if remote_version == CURRENT_VERSION:
-        return f"Already running latest version ({CURRENT_VERSION})"
 
-    print(f"Downloading version {remote_version}...")
+    version = update.get("version")
+    url = update.get("download")
+    expected_hash = update.get("checksum", "").lower()
+
+
+    print(f"Downloading version {version}...")
+
 
     try:
+        tmp = tempfile.NamedTemporaryFile(
+            delete=False
+        )
 
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp_path = tmp.name
 
-            tmp_name = tmp.name
+        with requests.get(
+            url,
+            stream=True,
+            timeout=REQUEST_TIMEOUT
+        ) as response:
 
-            r = requests.get(download_url, stream=True, timeout=REQUEST_TIMEOUT)
-            r.raise_for_status()
+            response.raise_for_status()
 
-            for chunk in r.iter_content(8192):
+            for chunk in response.iter_content(8192):
                 if chunk:
                     tmp.write(chunk)
 
+        tmp.close()
+
     except Exception as e:
-        return f"Download failed:\n{e}"
+        return f"Download failed: {e}"
+
 
     print("Verifying checksum...")
 
-    calculated = sha256sum(tmp_name).lower()
+    calculated = sha256sum(tmp_path)
 
-    if calculated != expected_hash:
 
-        os.remove(tmp_name)
+    if calculated.lower() != expected_hash:
+
+        os.remove(tmp_path)
 
         return (
-            "Checksum mismatch!\n\n"
-            f"Expected : {expected_hash}\n"
-            f"Received : {calculated}"
+            "Checksum failed\n"
+            f"Expected: {expected_hash}\n"
+            f"Got:      {calculated}"
         )
+
+
     print("Stopping service...")
 
     subprocess.run(
-        ["rc-service", "strongman", "stop"],
+        [
+            "rc-service",
+            "strongman",
+            "stop"
+        ],
         check=False
     )
 
-    print("Installing update...")
 
-    try:
+    create_update_script(tmp_path)
 
-        if os.path.exists(BINARY_PATH):
-            shutil.copy2(BINARY_PATH, BACKUP_PATH)
 
-        shutil.copy2(tmp_name, BINARY_PATH)
-
-        os.chmod(BINARY_PATH, 0o755)
-
-        os.remove(tmp_name)
-
-    except Exception as e:
-        return f"Installation failed:\n{e}"
-
-    print("Restarting service...")
-
-    subprocess.run(
-        ["rc-service", "strongman", "start"],
-        check=False
+    subprocess.Popen(
+        [
+            UPDATE_SCRIPT
+        ],
+        start_new_session=True
     )
 
-    return f"Update to {remote_version} installed successfully."
+
+    return (
+        f"Update to {version} prepared.\n"
+        "Updater will replace binary and restart service."
+    )
+
+
+def create_update_script(new_binary):
+
+    script = f"""#!/bin/sh
+
+sleep 3
+
+echo "Installing new strongman binary"
+
+if [ -f "{BINARY_PATH}" ]; then
+    cp "{BINARY_PATH}" "{BACKUP_PATH}"
+fi
+
+cp "{new_binary}" "{BINARY_PATH}"
+
+chmod 755 "{BINARY_PATH}"
+
+rm -f "{new_binary}"
+
+echo "Starting service"
+
+rc-service strongman start
+
+rm -f "$0"
+
+"""
+
+
+    with open(
+        UPDATE_SCRIPT,
+        "w"
+    ) as f:
+        f.write(script)
+
+
+    os.chmod(
+        UPDATE_SCRIPT,
+        0o755
+    )
