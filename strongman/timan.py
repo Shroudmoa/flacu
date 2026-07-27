@@ -237,4 +237,4 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     sys.stdout.flush()
-    app.run(debug=False, host="0.0.0.0", port=443, threaded=True, ssl_context=(cert, key))
+    app.run(debug=False, host="0.0.0.0", port=5000, threaded=True, ssl_context=(cert, key))

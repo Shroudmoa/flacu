@@ -8,6 +8,7 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+#pip install cryptography
 
 SSL_DIR = Path("/etc/strongman")
 CERT_FILE = SSL_DIR / "server.crt"
