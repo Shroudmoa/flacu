@@ -24,6 +24,7 @@ from check import (
     test_custom,
 )
 from serviceMan import service_status, start_service, stop_service
+from updater import check_update
 ###############################################
 app = Flask(__name__)
 app.secret_key = "lbBo85tuAguLZgMMAZisKp6q5Cohkjyy8ikYqtWb"
@@ -212,6 +213,8 @@ def alpine_setup():
     run("apk add curl iproute2")
     run("apk add git fish strongswan iptables")
     run("rc-update add charon default")
+    run("rc-update add crond default")
+    run("rc-service crond start")
     # Configure doas
     with open("/etc/doas.conf", "w") as f:
         f.write("permit persist :wheel\n")
@@ -225,11 +228,15 @@ def alpine_setup():
 
 
 if __name__ == "__main__":
+    if "--update" in sys.argv: 
+        print(check_update())
+        sys.exit(0)
     try:
         if installTiManService():
             alpine_setup()
             run("rc-service strongman start")
             run("rc-update add strongman default")
+            
             sys.exit(0)
     except Exception as e:
         print("Install failed:", e)
