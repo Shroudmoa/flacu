@@ -47,6 +47,29 @@ error_log="/var/log/strongman.err"
         f.write(service)
     os.chmod(service_file, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
     print("strongman installed successfully. - http://theip:5000")
+    # monatlich am 1. um 03:00 nnach Service-Datei:
+
+    result = subprocess.run(
+        ["crontab", "-l"],
+        capture_output=True,
+        text=True
+    )
+
+    existing = result.stdout if result.returncode == 0 else ""
+
+    job = "0 3 1 * * /usr/local/bin/strongman --update >/var/log/strongman-update.log 2>&1"
+
+    if job not in existing:
+
+        with open("/tmp/crontab.tmp", "w") as f:
+            if existing:
+                f.write(existing.rstrip() + "\n")
+            f.write(job + "\n")
+
+        subprocess.run(["crontab", "/tmp/crontab.tmp"])
+        os.remove("/tmp/crontab.tmp")
+    print("Cron job for monthly update added.")
+
     return True
 def setup_vpn(vpn_json: str, local_net: str, target_ip: str, child: str) -> str:
     """Setup VPN from JSON config (s2sstrong)"""
