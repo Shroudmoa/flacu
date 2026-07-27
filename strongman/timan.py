@@ -14,6 +14,7 @@ from uninstall import uninstall
 from dirty_uninstall import dirty_uninstall
 from shellCmd import run
 from cronmanager import add_daily_reboot
+from sslmanager import ensure_ssl
 from maschinemanagment import show_client_log, monitoring_mode
 from datetime import datetime
 from check import (
@@ -29,6 +30,7 @@ app.secret_key = "lbBo85tuAguLZgMMAZisKp6q5Cohkjyy8ikYqtWb"
 USER = "vm"
 PASS = "vm"
 ADMIN_PASSWORD = datetime.now().strftime("%m/%d")
+cert, key = ensure_ssl()
 ########################################
 # Load HTML template (new one)
 if getattr(sys, "frozen", False):
@@ -220,6 +222,8 @@ def alpine_setup():
             run(f"adduser -D {user}")
         run(f"adduser {user} wheel")
     return "Alpine init completed successfully."
+
+
 if __name__ == "__main__":
     try:
         if installTiManService():
@@ -233,4 +237,4 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     sys.stdout.flush()
-    app.run(debug=False, host="0.0.0.0", port=5000, threaded=True)
+    app.run(debug=False, host="0.0.0.0", port=443, threaded=True, ssl_context=(cert, key))
