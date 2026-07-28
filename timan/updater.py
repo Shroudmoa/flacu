@@ -3,7 +3,6 @@ import os
 import shutil
 import subprocess
 import tempfile
-
 import requests
 
 
@@ -89,11 +88,13 @@ def update():
     print("New version:", version)
 
     try:
+
         print("Downloading...")
 
         new_file = download_file(url)
 
     except Exception as e:
+
         print("Download failed:", e)
         return
 
@@ -123,14 +124,6 @@ def update():
 
     try:
 
-        print("Creating backup...")
-
-        if os.path.exists(timan):
-            shutil.copy2(
-                timan,
-                BACKUP
-            )
-
         print("Installing new binary...")
 
         shutil.copy2(
@@ -146,12 +139,6 @@ def update():
     except Exception as e:
 
         print("Install failed:", e)
-
-        if os.path.exists(BACKUP):
-            shutil.copy2(
-                BACKUP,
-                timan
-            )
 
         subprocess.run(
             [
@@ -181,6 +168,6 @@ def update():
     )
 
     print("Update completed:", version)
-    
+   
 if __name__ == "__main__":
     update()

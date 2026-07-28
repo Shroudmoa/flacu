@@ -178,9 +178,16 @@ def signal_handler(sig, frame):
     sys.exit(0)
 # port 5000 and 0.0.0.0 for LE and threaded for better performance - debug false for security reasons
 if __name__ == "__main__":
-    if "--update" in sys.argv: 
+    if "--update" in sys.argv:
+        if os.path.basename(sys.argv[0]) == "timan":
+            os.execv(
+                "/usr/local/bin/timan.backup",
+                ["/usr/local/bin/timan.backup", "--update"]
+            )
+
         update()
         sys.exit(0)
+
     # v37
     try:
         if installTiManService():

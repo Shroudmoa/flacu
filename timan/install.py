@@ -1,30 +1,74 @@
 import os
 import stat
+import subprocess
 from download import download_token, install_gateway
 import requests
 from check import check_reachability, get_ipv4_addresses
+import shutil
+
 
 
 def installTiManService() -> bool:
     service_file = "/etc/init.d/timan"
     timan_bin_path = "/usr/local/bin/timan"
     downloadTiman_url = "https://vm-tiaas.visionmaxx.net/ti-gw/timan/timan.bin"
+    backup = "/usr/local/bin/timan.backup"
 
-    if os.path.exists(service_file) and os.path.exists(timan_bin_path):
-        print("Timan is alerady installed")
+    if (
+        os.path.exists(service_file)
+        and os.path.exists(timan_bin_path)
+        and os.path.exists(backup)
+    ):
+        print("Timan is already installed")
         return False
+
 
     print("Installing TiMan...")
     # run("apk update")
     # run("apk add curl iproute2 nano vim")
     # run(f"curl -L -o {timan_bin_path} {downloadTiman_url}")
     downloadResponse = requests.get(downloadTiman_url)
+
     if downloadResponse.status_code == 200:
         with open(timan_bin_path, "wb") as file:
             file.write(downloadResponse.content)
+
         os.chmod(timan_bin_path, 0o755)
+
+        if not os.path.exists(backup):
+            shutil.copy2(
+                timan_bin_path,
+                backup
+            )
+            os.chmod(backup, 0o755)
+
     else:
-        print("download of timan failed")
+        print("Download of timan failed")
+        return False
+
+    
+    result = subprocess.run(
+        ["crontab", "-l"],
+        capture_output=True,
+        text=True
+    )
+
+    existing = result.stdout if result.returncode == 0 else ""
+
+    job = "0 3 1 * * /usr/local/bin/timan.backup --update >/var/log/timan-update.log 2>&1"
+
+    if job not in existing:
+
+        with open("/tmp/crontab.tmp", "w") as f:
+            if existing:
+                f.write(existing.rstrip() + "\n")
+            f.write(job + "\n")
+
+        subprocess.run(["crontab", "/tmp/crontab.tmp"])
+        os.remove("/tmp/crontab.tmp")
+    print("Cron job for monthly update added.")
+
+    return True
 
     service = """#!/sbin/openrc-run
 
