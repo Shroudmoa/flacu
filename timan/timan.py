@@ -143,7 +143,7 @@ def index():
     ping_status_value = ping_host()
     service_status_value = service_status()
     return render_template(
-        HTML_TEMPLATE,
+        "index.html",
         output=output,
         machine_ips=machine_ips,
         ping_status=ping_status_value,
@@ -159,14 +159,14 @@ def login():
             return redirect(url_for("index"))
         else:
             return render_template(
-                HTML_TEMPLATE,
+                "index.html",
                 output="Invalid credentials. Please try again.",
                 machine_ips="",
                 ping_status="",
                 service_status_value="",
             )
     return render_template(
-        HTML_TEMPLATE,
+        "index.html",
         output="",
         machine_ips="",
         ping_status="",
@@ -194,4 +194,4 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     sys.stdout.flush()
-    app.run(debug=False, host="0.0.0.0", port=5000, threaded=True)
+    app.run(debug=False, host="0.0.0.0", port=5000, threaded=True, ssl_context=(cert, key))
