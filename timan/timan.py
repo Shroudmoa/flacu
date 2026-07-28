@@ -14,7 +14,7 @@ from shellCmd import run
 from cronmanager import add_daily_reboot
 from maschinemanagment import show_client_log, monitoring_mode
 from datetime import datetime
-from updater import check_update
+from updater import update 
 from sslmanager import ensure_ssl
 from check import (
     ping_host,
@@ -179,7 +179,7 @@ def signal_handler(sig, frame):
 # port 5000 and 0.0.0.0 for LE and threaded for better performance - debug false for security reasons
 if __name__ == "__main__":
     if "--update" in sys.argv: 
-        print(check_update())
+        update()
         sys.exit(0)
     # v37
     try:
