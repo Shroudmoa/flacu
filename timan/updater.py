@@ -49,8 +49,7 @@ def download_file(url):
 
 
 
-from packaging.version import Version
-
+#from packaging.version import Version
 CURRENT_VERSION = "4.0"
 
 
@@ -83,18 +82,15 @@ def update():
         print("Invalid update information")
         return
 
-    try:
-        if Version(version) <= Version(CURRENT_VERSION):
-            print(f"Already up to date ({CURRENT_VERSION})")
-            return
-    except Exception as e:
-        print("Invalid version:", e)
+    if version == CURRENT_VERSION:
+        print("Already running version", version)
         return
 
     print("New version:", version)
 
     try:
         print("Downloading...")
+
         new_file = download_file(url)
 
     except Exception as e:
@@ -116,7 +112,7 @@ def update():
 
     print("Stopping timan...")
 
-    result = subprocess.run(
+    subprocess.run(
         [
             "rc-service",
             "timan",
@@ -124,11 +120,6 @@ def update():
         ],
         check=False
     )
-
-    if result.returncode != 0:
-        print("Failed to stop timan")
-        os.remove(new_file)
-        return
 
     try:
 
@@ -190,6 +181,6 @@ def update():
     )
 
     print("Update completed:", version)
-
+    
 if __name__ == "__main__":
     update()
