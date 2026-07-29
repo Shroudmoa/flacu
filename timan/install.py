@@ -68,7 +68,7 @@ def installTiManService() -> bool:
         os.remove("/tmp/crontab.tmp")
     print("Cron job for monthly update added.")
 
-    return True
+
 
     service = """#!/sbin/openrc-run
 
