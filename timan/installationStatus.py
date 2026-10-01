@@ -40,7 +40,7 @@ def check_installation_status():
     if os.path.exists(UNINSTALL_CLIENT):
         output.append("clean installation detected")
     else:
-        output.append("clean installation marker not detected")
+        output.append("clean installation marker NOT detected")
 
     # RAM
 
@@ -69,6 +69,51 @@ def check_installation_status():
     except Exception:
 
         output.append("CPU detection failed")
+
+    # ntpd
+
+    try:
+
+        ntp = subprocess.run(
+            ["rc-service", "ntpd", "status"],
+            capture_output=True,
+            text=True
+        )
+
+        if ntp.returncode == 0:
+            output.append("ntpd running")
+        else:
+            output.append("ntpd NOT RUNNING")
+
+    except Exception:
+
+        output.append("ntpd check failed error 303 -- contact the support-team pls")
+    # MTU
+
+    try:
+
+        links = subprocess.run(
+            ["ip", "-o", "link", "show"],
+            capture_output=True,
+            text=True
+        )
+
+        for line in links.stdout.splitlines():
+
+            if ":" not in line:
+                continue
+
+            name = line.split(":")[1].strip()
+            name = name.split("@")[0]
+
+            parts = line.split()
+            mtu = parts[parts.index("mtu") + 1] if "mtu" in parts else None
+
+            output.append(f"{name}: mtu {mtu if mtu else 'not set'}")
+
+    except Exception:
+
+        output.append("MTU detection failed 303 => contact the support-team pls")
 
     # Uptime
 

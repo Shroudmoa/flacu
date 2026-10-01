@@ -103,8 +103,8 @@ def check_ports_socket_parallel(host="127.0.0.1", show_only_problems=False):
     return output_lines
 
 
-# keep - might use it for s2s Moni
-def ping_host(host="8.8.8.8"):
+# keep - might use it for s2s Moni  -- changed to portal on 01.10.2026
+def ping_host(host="wl-ti-gateway-nutzerportal-pu.wlcle.org"):
     try:
         result = subprocess.run(
             ["ping", "-c", "1", host], capture_output=True, text=True, timeout=5

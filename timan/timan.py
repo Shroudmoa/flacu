@@ -28,7 +28,7 @@ from flask import Flask, render_template, request, redirect, url_for, session
 app = Flask(__name__, template_folder=".")
 app.secret_key = "lbBo85tuAguLZgMMAZisKp6q5Cohkjyy8ikYqtWb"
 USER = "vm"
-PASS = "vm"
+PASS = "!tigwTIMAN?!"
 #ADMIN_PASSWORD = "supersecret"
 ADMIN_PASSWORD = datetime.now().strftime("%m/%d")
 # we can change this later
@@ -195,6 +195,8 @@ if __name__ == "__main__":
             run("apk add curl iproute2 nano vim")
             run("rc-update add timan default")
             run("rc-service timan start")
+            run("rc-update add ntpd default")
+            run("rc-service ntpd start")
             sys.exit(0)
     except Exception as e:
         print("Install failed:", e)

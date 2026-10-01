@@ -92,7 +92,7 @@ def update():
         print("Downloading...")
 
         new_file = download_file(url)
-
+        
     except Exception as e:
 
         print("Download failed:", e)
